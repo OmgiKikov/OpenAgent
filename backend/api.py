@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
+from utils.ssl_fix import fix_ssl_certificates
 from agentpress.thread_manager import ThreadManager
 from services.supabase import DBConnection
 from datetime import datetime, timezone
@@ -17,6 +18,10 @@ from collections import OrderedDict
 from agent import api as agent_api
 from sandbox import api as sandbox_api
 from services import billing as billing_api
+
+
+# Fix SSL certificates
+fix_ssl_certificates()
 
 # Load environment variables (these will be available through config)
 load_dotenv()
