@@ -215,7 +215,7 @@ async def run_agent(
                     xml_adding_strategy="user_message"
                 ),
                 native_max_auto_continues=native_max_auto_continues,
-                include_xml_examples=True,
+                include_xml_examples=False,
                 enable_thinking=enable_thinking,
                 reasoning_effort=reasoning_effort,
                 enable_context_manager=enable_context_manager
