@@ -61,18 +61,18 @@ async def run_agent(
     
     # Initialize tools with project_id instead of sandbox object
     # This ensures each tool independently verifies it's operating on the correct project
-    thread_manager.add_tool(SandboxShellTool, project_id=project_id, thread_manager=thread_manager)
-    thread_manager.add_tool(SandboxFilesTool, project_id=project_id, thread_manager=thread_manager)
-    thread_manager.add_tool(SandboxBrowserTool, project_id=project_id, thread_id=thread_id, thread_manager=thread_manager)
-    thread_manager.add_tool(SandboxDeployTool, project_id=project_id, thread_manager=thread_manager)
-    thread_manager.add_tool(SandboxExposeTool, project_id=project_id, thread_manager=thread_manager)
-    thread_manager.add_tool(MessageTool) # we are just doing this via prompt as there is no need to call it as a tool
-    thread_manager.add_tool(WebSearchTool)
-    thread_manager.add_tool(SandboxVisionTool, project_id=project_id, thread_id=thread_id, thread_manager=thread_manager)
+    await thread_manager.add_tool(SandboxShellTool, project_id=project_id, thread_manager=thread_manager)
+    await thread_manager.add_tool(SandboxFilesTool, project_id=project_id, thread_manager=thread_manager)
+    await thread_manager.add_tool(SandboxBrowserTool, project_id=project_id, thread_id=thread_id, thread_manager=thread_manager)
+    await thread_manager.add_tool(SandboxDeployTool, project_id=project_id, thread_manager=thread_manager)
+    await thread_manager.add_tool(SandboxExposeTool, project_id=project_id, thread_manager=thread_manager)
+    await thread_manager.add_tool(MessageTool) # we are just doing this via prompt as there is no need to call it as a tool
+    await thread_manager.add_tool(WebSearchTool)
+    await thread_manager.add_tool(SandboxVisionTool, project_id=project_id, thread_id=thread_id, thread_manager=thread_manager)
         
     # Add data providers tool if RapidAPI key is available
     if config.RAPID_API_KEY:
-        thread_manager.add_tool(DataProvidersTool)
+        await thread_manager.add_tool(DataProvidersTool)
 
     system_message = { "role": "system", "content": get_system_prompt() }
 

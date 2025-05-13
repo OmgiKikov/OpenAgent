@@ -46,9 +46,9 @@ class ThreadManager:
         )
         self.context_manager = ContextManager()
 
-    def add_tool(self, tool_class: Type[Tool], function_names: Optional[List[str]] = None, **kwargs):
+    async def add_tool(self, tool_class: Type[Tool], function_names: Optional[List[str]] = None, **kwargs):
         """Add a tool to the ThreadManager."""
-        self.tool_registry.register_tool(tool_class, function_names, **kwargs)
+        await self.tool_registry.register_tool(tool_class, function_names, **kwargs)
 
     async def add_message(
         self, 

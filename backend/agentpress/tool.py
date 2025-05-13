@@ -121,6 +121,9 @@ class Tool(ABC):
                 self._schemas[name] = method.tool_schemas
                 logger.debug(f"Registered schemas for method '{name}' in {self.__class__.__name__}")
 
+    async def initialize(self):
+        pass
+
     def get_schemas(self) -> Dict[str, List[ToolSchema]]:
         """Get all registered tool schemas.
         

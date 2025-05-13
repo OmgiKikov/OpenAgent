@@ -27,7 +27,7 @@ class ToolRegistry:
         self.xml_tools = {}
         logger.debug("Initialized new ToolRegistry instance")
     
-    def register_tool(self, tool_class: Type[Tool], function_names: Optional[List[str]] = None, **kwargs):
+    async def register_tool(self, tool_class: Type[Tool], function_names: Optional[List[str]] = None, **kwargs):
         """Register a tool with optional function filtering.
         
         Args:
@@ -41,6 +41,7 @@ class ToolRegistry:
         """
         logger.debug(f"Registering tool class: {tool_class.__name__}")
         tool_instance = tool_class(**kwargs)
+        await tool_instance.initialize()
         schemas = tool_instance.get_schemas()
         
         logger.debug(f"Available schemas for {tool_class.__name__}: {list(schemas.keys())}")
