@@ -1,16 +1,15 @@
 import os
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, APIRouter, Form, Depends, Request
-from fastapi.responses import Response, JSONResponse
+from fastapi.responses import Response
 from pydantic import BaseModel
 
-from utils.logger import logger
-from utils.auth_utils import get_current_user_id_from_jwt, get_user_id_from_stream_auth, get_optional_user_id
 from sandbox.sandbox import get_or_start_sandbox
+from utils.logger import logger
+from utils.auth_utils import get_optional_user_id
 from services.supabase import DBConnection
 from agent.api import get_or_create_project_sandbox
-
 
 # Initialize shared resources
 router = APIRouter(tags=["sandbox"])
@@ -92,19 +91,15 @@ async def get_sandbox_by_id_safely(client, sandbox_id: str):
         logger.error(f"No project found for sandbox ID: {sandbox_id}")
         raise HTTPException(status_code=404, detail="Sandbox not found - no project owns this sandbox ID")
     
-    project_id = project_result.data[0]['project_id']
-    logger.debug(f"Found project {project_id} for sandbox {sandbox_id}")
+    # project_id = project_result.data[0]['project_id']
+    # logger.debug(f"Found project {project_id} for sandbox {sandbox_id}")
     
     try:
         # Get the sandbox
-        sandbox, retrieved_sandbox_id, sandbox_pass = await get_or_create_project_sandbox(client, project_id)
-        
-        # Verify we got the right sandbox
-        if retrieved_sandbox_id != sandbox_id:
-            logger.warning(f"Retrieved sandbox ID {retrieved_sandbox_id} doesn't match requested ID {sandbox_id} for project {project_id}")
-            # Fall back to the direct method if IDs don't match (shouldn't happen but just in case)
-            sandbox = await get_or_start_sandbox(sandbox_id)
-        
+        sandbox = await get_or_start_sandbox(sandbox_id)
+        # Extract just the sandbox object from the tuple (sandbox, sandbox_id, sandbox_pass)
+        # sandbox = sandbox_tuple[0]
+            
         return sandbox
     except Exception as e:
         logger.error(f"Error retrieving sandbox {sandbox_id}: {str(e)}")
@@ -133,46 +128,6 @@ async def create_file(
         content = await file.read()
         
         # Create file using raw binary content
-        sandbox.fs.upload_file(path, content)
-        logger.info(f"File created at {path} in sandbox {sandbox_id}")
-        
-        return {"status": "success", "created": True, "path": path}
-    except Exception as e:
-        logger.error(f"Error creating file in sandbox {sandbox_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-# For backward compatibility, keep the JSON version too
-@router.post("/sandboxes/{sandbox_id}/files/json")
-async def create_file_json(
-    sandbox_id: str, 
-    file_request: dict,
-    request: Request = None,
-    user_id: Optional[str] = Depends(get_optional_user_id)
-):
-    """Create a file in the sandbox using JSON (legacy support)"""
-    logger.info(f"Received JSON file creation request for sandbox {sandbox_id}, user_id: {user_id}")
-    client = await db.client
-    
-    # Verify the user has access to this sandbox
-    await verify_sandbox_access(client, sandbox_id, user_id)
-    
-    try:
-        # Get sandbox using the safer method
-        sandbox = await get_sandbox_by_id_safely(client, sandbox_id)
-        
-        # Get file path and content
-        path = file_request.get("path")
-        content = file_request.get("content", "")
-        
-        if not path:
-            logger.error(f"Missing file path in request for sandbox {sandbox_id}")
-            raise HTTPException(status_code=400, detail="File path is required")
-        
-        # Convert string content to bytes
-        if isinstance(content, str):
-            content = content.encode('utf-8')
-        
-        # Create file
         sandbox.fs.upload_file(path, content)
         logger.info(f"File created at {path} in sandbox {sandbox_id}")
         
@@ -256,6 +211,7 @@ async def read_file(
         logger.error(f"Error reading file in sandbox {sandbox_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# Should happen on server-side fully
 @router.post("/project/{project_id}/sandbox/ensure-active")
 async def ensure_project_sandbox_active(
     project_id: str,
