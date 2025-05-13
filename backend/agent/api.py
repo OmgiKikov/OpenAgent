@@ -11,6 +11,8 @@ from pydantic import BaseModel
 import tempfile
 import os
 
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
 from agentpress.thread_manager import ThreadManager
 from services.supabase import DBConnection
 from services import redis
@@ -692,37 +694,46 @@ async def run_agent_background(
         await redis.set(instance_active_key, "running", ex=redis.REDIS_KEY_TTL)
 
         # Initialize agent generator
-        agent_gen = run_agent(
-            thread_id=thread_id, project_id=project_id, stream=stream,
-            thread_manager=thread_manager, model_name=model_name,
-            enable_thinking=enable_thinking, reasoning_effort=reasoning_effort,
-            enable_context_manager=enable_context_manager
+        server_params = StdioServerParameters(
+            command="npx",
+            args=["-y", "mcp-remote", "https://mcp.linear.app/sse"],
+            env=None,
         )
 
-        final_status = "running"
-        error_message = None
+        async with stdio_client(server_params) as (read, write):
+            async with ClientSession(read, write) as mcp_session:
+                agent_gen = run_agent(
+                    thread_id=thread_id, project_id=project_id, stream=stream,
+                    thread_manager=thread_manager, model_name=model_name,
+                    enable_thinking=enable_thinking, reasoning_effort=reasoning_effort,
+                    enable_context_manager=enable_context_manager,
+                    mcp_session=mcp_session
+                )
 
-        async for response in agent_gen:
-            if stop_signal_received:
-                logger.info(f"Agent run {agent_run_id} stopped by signal.")
-                final_status = "stopped"
-                break
+                final_status = "running"
+                error_message = None
 
-            # Store response in Redis list and publish notification
-            response_json = json.dumps(response)
-            await redis.rpush(response_list_key, response_json)
-            await redis.publish(response_channel, "new")
-            total_responses += 1
+                async for response in agent_gen:
+                    if stop_signal_received:
+                        logger.info(f"Agent run {agent_run_id} stopped by signal.")
+                        final_status = "stopped"
+                        break
 
-            # Check for agent-signaled completion or error
-            if response.get('type') == 'status':
-                 status_val = response.get('status')
-                 if status_val in ['completed', 'failed', 'stopped']:
-                     logger.info(f"Agent run {agent_run_id} finished via status message: {status_val}")
-                     final_status = status_val
-                     if status_val == 'failed' or status_val == 'stopped':
-                         error_message = response.get('message', f"Run ended with status: {status_val}")
-                     break
+                    # Store response in Redis list and publish notification
+                    response_json = json.dumps(response)
+                    await redis.rpush(response_list_key, response_json)
+                    await redis.publish(response_channel, "new")
+                    total_responses += 1
+
+                    # Check for agent-signaled completion or error
+                    if response.get('type') == 'status':
+                        status_val = response.get('status')
+                        if status_val in ['completed', 'failed', 'stopped']:
+                            logger.info(f"Agent run {agent_run_id} finished via status message: {status_val}")
+                            final_status = status_val
+                            if status_val == 'failed' or status_val == 'stopped':
+                                error_message = response.get('message', f"Run ended with status: {status_val}")
+                            break
 
         # If loop finished without explicit completion/error/stop signal, mark as completed
         if final_status == "running":
