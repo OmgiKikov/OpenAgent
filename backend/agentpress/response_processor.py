@@ -245,19 +245,41 @@ class ResponseProcessor:
                             # --- Buffer and Execute Complete Native Tool Calls ---
                             if not hasattr(tool_call_chunk, 'function'): continue
                             idx = tool_call_chunk.index if hasattr(tool_call_chunk, 'index') else 0
-                            # ... (buffer update logic remains same) ...
-                            # ... (check complete logic remains same) ...
-                            has_complete_tool_call = False # Placeholder
-                            if (tool_calls_buffer.get(idx) and
-                                tool_calls_buffer[idx]['id'] and
-                                tool_calls_buffer[idx]['function']['name'] and
-                                tool_calls_buffer[idx]['function']['arguments']):
+                            
+                            # Initialize buffer entry if needed
+                            if idx not in tool_calls_buffer:
+                                tool_calls_buffer[idx] = {
+                                    'id': None,
+                                    'function': {'name': None, 'arguments': ''},
+                                    'type': 'function'
+                                }
+                            
+                            # Update buffer with chunk data
+                            if hasattr(tool_call_chunk, 'id') and tool_call_chunk.id:
+                                tool_calls_buffer[idx]['id'] = tool_call_chunk.id
+                            
+                            if hasattr(tool_call_chunk, 'function'):
+                                if hasattr(tool_call_chunk.function, 'name') and tool_call_chunk.function.name:
+                                    tool_calls_buffer[idx]['function']['name'] = tool_call_chunk.function.name
+                                
+                                if hasattr(tool_call_chunk.function, 'arguments') and tool_call_chunk.function.arguments:
+                                    current_args = tool_calls_buffer[idx]['function']['arguments']
+                                    tool_calls_buffer[idx]['function']['arguments'] = current_args + tool_call_chunk.function.arguments
+                            
+                            # Check if the tool call is complete
+                            has_complete_tool_call = (
+                                tool_calls_buffer[idx]['id'] and 
+                                tool_calls_buffer[idx]['function']['name'] and 
+                                tool_calls_buffer[idx]['function']['arguments']
+                            )
+                            
+                            if has_complete_tool_call:
+                                # Validate that arguments are valid JSON
                                 try:
                                     json.loads(tool_calls_buffer[idx]['function']['arguments'])
-                                    has_complete_tool_call = True
-                                except json.JSONDecodeError: pass
-
-
+                                except json.JSONDecodeError:
+                                    has_complete_tool_call = False
+                            
                             if has_complete_tool_call and config.execute_tools and config.execute_on_stream:
                                 current_tool = tool_calls_buffer[idx]
                                 tool_call_data = {
@@ -352,6 +374,7 @@ class ResponseProcessor:
                 logger.info(f"Stream finished with reason: xml_tool_limit_reached after {xml_tool_call_count} XML tool calls")
 
             # --- SAVE and YIELD Final Assistant Message ---
+            complete_native_tool_calls = []
             if accumulated_content:
                 # ... (Truncate accumulated_content logic) ...
                 if config.max_xml_tool_calls > 0 and xml_tool_call_count >= config.max_xml_tool_calls and xml_chunks_buffer:
@@ -361,7 +384,6 @@ class ResponseProcessor:
                         accumulated_content = accumulated_content[:last_chunk_end_pos]
 
                 # ... (Extract complete_native_tool_calls logic) ...
-                complete_native_tool_calls = []
                 if config.native_tool_calling:
                     for idx, tc_buf in tool_calls_buffer.items():
                         if tc_buf['id'] and tc_buf['function']['name'] and tc_buf['function']['arguments']:
