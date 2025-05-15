@@ -10,7 +10,7 @@ from agent.tools.message_tool import MessageTool
 from agent.tools.sb_deploy_tool import SandboxDeployTool
 from agent.tools.sb_expose_tool import SandboxExposeTool
 from agent.tools.web_search_tool import SandboxWebSearchTool
-from agent.tools.mcp_tools import MCPTools
+from agent.tools.mcp_tools import GoogleCalendarTool
 from dotenv import load_dotenv
 from utils.config import config
 
@@ -75,7 +75,7 @@ async def run_agent(
     await thread_manager.add_tool(SandboxVisionTool, project_id=project_id, thread_id=thread_id, thread_manager=thread_manager)
 
     if mcp_session is not None:
-        await thread_manager.add_tool(MCPTools, session=mcp_session)
+        await thread_manager.add_tool(GoogleCalendarTool, session=mcp_session)
 
     # Add data providers tool if RapidAPI key is available
     if config.RAPID_API_KEY:
@@ -87,7 +87,7 @@ async def run_agent(
         sample_response_path = os.path.join(os.path.dirname(__file__), 'sample_responses/1.txt')
         with open(sample_response_path, 'r') as file:
             sample_response = file.read()
-        
+
         system_message = { "role": "system", "content": get_system_prompt() + "\n\n <sample_assistant_response>" + sample_response + "</sample_assistant_response>" }
     else:
         system_message = { "role": "system", "content": get_system_prompt() }
@@ -193,7 +193,7 @@ async def run_agent(
             max_tokens = 64000
         elif "gpt-4" in model_name.lower():
             max_tokens = 4096
-            
+
         try:
             # Make the LLM call and process the response
             response = await thread_manager.run_thread(
@@ -207,15 +207,15 @@ async def run_agent(
                 max_xml_tool_calls=1,
                 temporary_message=temporary_message,
                 processor_config=ProcessorConfig(
-                    xml_tool_calling=False,
-                    native_tool_calling=True,
+                    xml_tool_calling=True,
+                    native_tool_calling=False,
                     execute_tools=True,
                     execute_on_stream=True,
                     tool_execution_strategy="parallel",
                     xml_adding_strategy="user_message"
                 ),
                 native_max_auto_continues=native_max_auto_continues,
-                include_xml_examples=False,
+                include_xml_examples=True,
                 enable_thinking=enable_thinking,
                 reasoning_effort=reasoning_effort,
                 enable_context_manager=enable_context_manager
@@ -239,7 +239,7 @@ async def run_agent(
                         error_detected = True
                         yield chunk  # Forward the error chunk
                         continue     # Continue processing other chunks but don't break yet
-                        
+
                     # Check for XML versions like <ask>, <complete>, or <web-browser-takeover> in assistant content chunks
                     if chunk.get('type') == 'assistant' and 'content' in chunk:
                         try:
@@ -276,7 +276,7 @@ async def run_agent(
                 if error_detected:
                     logger.info(f"Stopping due to error detected in response")
                     break
-                    
+
                 if last_tool_call in ['ask', 'complete', 'web-browser-takeover']:
                     logger.info(f"Agent decided to stop with tool: {last_tool_call}")
                     continue_execution = False
@@ -291,7 +291,7 @@ async def run_agent(
                 }
                 # Stop execution immediately on any error
                 break
-                
+
         except Exception as e:
             # Just log the error and re-raise to stop all iterations
             error_msg = f"Error running thread: {str(e)}"
