@@ -11,7 +11,7 @@ import datetime
 import asyncio
 import logging
 
-# TODO: add subpages, etc... in filters as sometimes its necessary 
+# TODO: add subpages, etc... in filters as sometimes its necessary
 
 class SandboxWebSearchTool(SandboxToolsBase):
     """Tool for performing web searches using Tavily API and web scraping using Firecrawl."""
@@ -24,7 +24,7 @@ class SandboxWebSearchTool(SandboxToolsBase):
         self.tavily_api_key = config.TAVILY_API_KEY
         self.firecrawl_api_key = config.FIRECRAWL_API_KEY
         self.firecrawl_url = config.FIRECRAWL_URL
-        
+
         if not self.tavily_api_key:
             raise ValueError("TAVILY_API_KEY not found in configuration")
         if not self.firecrawl_api_key:
@@ -62,35 +62,35 @@ class SandboxWebSearchTool(SandboxToolsBase):
             {"param_name": "num_results", "node_type": "attribute", "path": "."}
         ],
         example='''
-        <!-- 
+        <!--
         The web-search tool allows you to search the internet for real-time information.
         Use this tool when you need to find current information, research topics, or verify facts.
-        
+
         THE TOOL NOW RETURNS:
         - Direct answer to your query from search results
         - Relevant images when available
         - Detailed search results including titles, URLs, and snippets
-        
+
         WORKFLOW RECOMMENDATION:
         1. Use web-search first with a specific question to get direct answers
         2. Only use scrape-webpage if you need more detailed information from specific pages
         -->
-        
+
         <!-- Simple search example -->
-        <web-search 
-            query="what is Kortix AI and what are they building?" 
+        <web-search
+            query="what is Kortix AI and what are they building?"
             num_results="20">
         </web-search>
-        
+
         <!-- Another search example -->
-        <web-search 
-            query="latest AI research on transformer models" 
+        <web-search
+            query="latest AI research on transformer models"
             num_results="20">
         </web-search>
         '''
     )
     async def web_search(
-        self, 
+        self,
         query: str,
         num_results: int = 20
     ) -> ToolResult:
@@ -101,7 +101,7 @@ class SandboxWebSearchTool(SandboxToolsBase):
             # Ensure we have a valid query
             if not query or not isinstance(query, str):
                 return self.fail_response("A valid search query is required.")
-            
+
             # Normalize num_results
             if num_results is None:
                 num_results = 20
@@ -124,16 +124,16 @@ class SandboxWebSearchTool(SandboxToolsBase):
                 include_answer="advanced",
                 search_depth="advanced",
             )
-            
-            # Return the complete Tavily response 
+
+            # Return the complete Tavily response
             # This includes the query, answer, results, images and more
             logging.info(f"Retrieved search results for query: '{query}' with answer and {len(search_response.get('results', []))} results")
-            
+
             return ToolResult(
                 success=True,
                 output=json.dumps(search_response, ensure_ascii=False)
             )
-        
+
         except Exception as e:
             error_message = str(e)
             logging.error(f"Error performing web search for '{query}': {error_message}")
@@ -165,10 +165,10 @@ class SandboxWebSearchTool(SandboxToolsBase):
             {"param_name": "urls", "node_type": "attribute", "path": "."}
         ],
         example='''
-  <!-- 
+  <!--
         IMPORTANT: The scrape-webpage tool should ONLY be used when you absolutely need
         the full content of specific web pages that can't be answered by web-search alone.
-        
+
         WORKFLOW PRIORITY:
         1. ALWAYS use web-search first - it now provides direct answers to questions
         2. Only use scrape-webpage when you need specific details not found in the search results
@@ -176,31 +176,31 @@ class SandboxWebSearchTool(SandboxToolsBase):
            - Direct answers to your query
            - Relevant images
            - Detailed search result snippets
-        
+
         When to use scrape-webpage:
         - When you need complete article text beyond what search snippets provide
         - For extracting structured data from specific pages
         - When analyzing lengthy documentation or guides
         - For comparing detailed content across multiple sources
-        
+
         When NOT to use scrape-webpage:
         - When web-search already answers the query
         - For simple fact-checking or basic information
         - When only a high-level overview is needed
         -->
-        
+
         <!-- Example workflow: -->
         <!-- 1. First search for relevant content with a specific question -->
-        <web-search 
-            query="what is Kortix AI and what are they building?" 
+        <web-search
+            query="what is Kortix AI and what are they building?"
             num_results="20">
         </web-search>
-        
+
         <!-- 2. Only if you need specific details not in the search results, then scrape -->
-        <scrape-webpage 
+        <scrape-webpage
             urls="https://www.kortix.ai/,https://github.com/kortix-ai/suna">
         </scrape-webpage>
-        
+
         <!-- 3. Only if scrape fails or interaction needed, use browser tools -->
         <!-- Example of when to use browser tools:
              - Dynamic content loading
@@ -217,36 +217,36 @@ class SandboxWebSearchTool(SandboxToolsBase):
     ) -> ToolResult:
         """
         Retrieve the complete text content of multiple webpages in a single efficient operation.
-        
+
         ALWAYS collect multiple relevant URLs from search results and scrape them all at once
         rather than making separate calls for each URL. This is much more efficient.
-        
+
         Parameters:
         - urls: Multiple URLs to scrape, separated by commas
         """
         try:
             logging.info(f"Starting to scrape webpages: {urls}")
-            
+
             # Ensure sandbox is initialized
             await self._ensure_sandbox()
-            
+
             # Parse the URLs parameter
             if not urls:
                 logging.warning("Scrape attempt with empty URLs")
                 return self.fail_response("Valid URLs are required.")
-            
+
             # Split the URLs string into a list
             url_list = [url.strip() for url in urls.split(',') if url.strip()]
-            
+
             if not url_list:
                 logging.warning("No valid URLs found in the input")
                 return self.fail_response("No valid URLs provided.")
-                
+
             if len(url_list) == 1:
                 logging.warning("Only a single URL provided - for efficiency you should scrape multiple URLs at once")
-            
+
             logging.info(f"Processing {len(url_list)} URLs: {url_list}")
-            
+
             # Process each URL and collect results
             results = []
             for url in url_list:
@@ -255,11 +255,11 @@ class SandboxWebSearchTool(SandboxToolsBase):
                     if not (url.startswith('http://') or url.startswith('https://')):
                         url = 'https://' + url
                         logging.info(f"Added https:// protocol to URL: {url}")
-                    
+
                     # Scrape this URL
                     result = await self._scrape_single_url(url)
                     results.append(result)
-                    
+
                 except Exception as e:
                     logging.error(f"Error processing URL {url}: {str(e)}")
                     results.append({
@@ -267,11 +267,11 @@ class SandboxWebSearchTool(SandboxToolsBase):
                         "success": False,
                         "error": str(e)
                     })
-            
+
             # Summarize results
             successful = sum(1 for r in results if r.get("success", False))
             failed = len(results) - successful
-            
+
             # Create success/failure message
             if successful == len(results):
                 message = f"Successfully scraped all {len(results)} URLs. Results saved to:"
@@ -290,23 +290,23 @@ class SandboxWebSearchTool(SandboxToolsBase):
             else:
                 error_details = "; ".join([f"{r.get('url')}: {r.get('error', 'Unknown error')}" for r in results])
                 return self.fail_response(f"Failed to scrape all {len(results)} URLs. Errors: {error_details}")
-            
+
             return ToolResult(
                 success=True,
                 output=message
             )
-        
+
         except Exception as e:
             error_message = str(e)
             logging.error(f"Error in scrape_webpage: {error_message}")
             return self.fail_response(f"Error processing scrape request: {error_message[:200]}")
-    
+
     async def _scrape_single_url(self, url: str) -> dict:
         """
         Helper function to scrape a single URL and return the result information.
         """
         logging.info(f"Scraping single URL: {url}")
-        
+
         try:
             # ---------- Firecrawl scrape endpoint ----------
             logging.info(f"Sending request to Firecrawl for URL: {url}")
@@ -319,12 +319,12 @@ class SandboxWebSearchTool(SandboxToolsBase):
                     "url": url,
                     "formats": ["markdown"]
                 }
-                
+
                 # Use longer timeout and retry logic for more reliability
                 max_retries = 3
                 timeout_seconds = 120
                 retry_count = 0
-                
+
                 while retry_count < max_retries:
                     try:
                         logging.info(f"Sending request to Firecrawl (attempt {retry_count + 1}/{max_retries})")
@@ -355,45 +355,45 @@ class SandboxWebSearchTool(SandboxToolsBase):
             title = data.get("data", {}).get("metadata", {}).get("title", "")
             markdown_content = data.get("data", {}).get("markdown", "")
             logging.info(f"Extracted content from {url}: title='{title}', content length={len(markdown_content)}")
-            
+
             formatted_result = {
                 "title": title,
                 "url": url,
                 "text": markdown_content
             }
-            
+
             # Add metadata if available
             if "metadata" in data.get("data", {}):
                 formatted_result["metadata"] = data["data"]["metadata"]
                 logging.info(f"Added metadata: {data['data']['metadata'].keys()}")
-            
+
             # Create a simple filename from the URL domain and date
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            
+
             # Extract domain from URL for the filename
             from urllib.parse import urlparse
             parsed_url = urlparse(url)
             domain = parsed_url.netloc.replace("www.", "")
-            
+
             # Clean up domain for filename
             domain = "".join([c if c.isalnum() else "_" for c in domain])
             safe_filename = f"{timestamp}_{domain}.json"
-            
+
             logging.info(f"Generated filename: {safe_filename}")
-            
+
             # Save results to a file in the /workspace/scrape directory
             scrape_dir = f"{self.workspace_path}/scrape"
             self.sandbox.fs.create_folder(scrape_dir, "755")
-            
+
             results_file_path = f"{scrape_dir}/{safe_filename}"
             json_content = json.dumps(formatted_result, ensure_ascii=False, indent=2)
             logging.info(f"Saving content to file: {results_file_path}, size: {len(json_content)} bytes")
-            
+
             self.sandbox.fs.upload_file(
-                results_file_path, 
+                results_file_path,
                 json_content.encode()
             )
-            
+
             return {
                 "url": url,
                 "success": True,
@@ -401,11 +401,11 @@ class SandboxWebSearchTool(SandboxToolsBase):
                 "file_path": results_file_path,
                 "content_length": len(markdown_content)
             }
-        
+
         except Exception as e:
             error_message = str(e)
             logging.error(f"Error scraping URL '{url}': {error_message}")
-            
+
             # Create an error result
             return {
                 "url": url,
@@ -418,15 +418,15 @@ if __name__ == "__main__":
         """Test function for the web search tool"""
         # This test function is not compatible with the sandbox version
         print("Test function needs to be updated for sandbox version")
-    
+
     async def test_scrape_webpage():
         """Test function for the webpage scrape tool"""
         # This test function is not compatible with the sandbox version
         print("Test function needs to be updated for sandbox version")
-    
+
     async def run_tests():
         """Run all test functions"""
         await test_web_search()
         await test_scrape_webpage()
-        
+
     asyncio.run(run_tests())
