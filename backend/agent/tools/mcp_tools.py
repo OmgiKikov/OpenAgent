@@ -21,13 +21,13 @@ class MCPTools(Tool):
         return ToolSchema(
             schema_type=SchemaType.OPENAPI,
             schema={
-                'type': 'function',
-                'function': {
-                    'name': tool.name,
-                    'description': tool.description,
-                    'parameters': tool.inputSchema
-                }
-            }
+                "type": "function",
+                "function": {
+                    "name": tool.name,
+                    "description": tool.description,
+                    "parameters": tool.inputSchema,
+                },
+            },
         )
 
     async def _list_tools(self) -> List[McpTool]:
@@ -38,10 +38,15 @@ class MCPTools(Tool):
         try:
             return super().__getattribute__(name)
         except AttributeError:
+
             async def remote_func(**kwargs):
                 result = await self._session.call_tool(name, arguments=kwargs)
-                content = json.dumps([element.model_dump(mode='json') for element in result.content])
-                return ToolResult(success=not result.isError, output=json.dumps(content, ensure_ascii=False))
+                content = json.dumps([element.model_dump(mode="json") for element in result.content])
+                return ToolResult(
+                    success=not result.isError,
+                    output=json.dumps(content, ensure_ascii=False),
+                )
+
             return remote_func
 
 
@@ -52,12 +57,12 @@ class GoogleCalendarTool(Tool):
 
     @xml_schema(
         tag_name="list-calendars",
-        example='''
+        example="""
         <!-- List all available calendars. -->
-        '''
+        """,
     )
     async def list_calendars(self, **kwargs) -> ToolResult:
-        print(f'Run list_calendars. Tool kwargs: {kwargs}')
-        result = await self._session.call_tool('list-calendars', arguments=kwargs)
-        content = json.dumps([element.model_dump(mode='json') for element in result.content])
+        print(f"Run list_calendars. Tool kwargs: {kwargs}")
+        result = await self._session.call_tool("list-calendars", arguments=kwargs)
+        content = json.dumps([element.model_dump(mode="json") for element in result.content])
         return ToolResult(success=not result.isError, output=json.dumps(content, ensure_ascii=False))

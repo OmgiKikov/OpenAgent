@@ -17,9 +17,9 @@ def fix_ssl_certificates():
             logger.info(f"Setting SSL certificate path to: {cert_path}")
 
             # Set environment variables used by various libraries
-            os.environ['SSL_CERT_FILE'] = cert_path
-            os.environ['REQUESTS_CA_BUNDLE'] = cert_path
-            os.environ['CURL_CA_BUNDLE'] = cert_path
+            os.environ["SSL_CERT_FILE"] = cert_path
+            os.environ["REQUESTS_CA_BUNDLE"] = cert_path
+            os.environ["CURL_CA_BUNDLE"] = cert_path
 
             # Also configure the default SSL context
             ssl._create_default_https_context = ssl.create_default_context

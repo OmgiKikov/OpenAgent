@@ -20,26 +20,31 @@ from utils.logger import logger
 from utils.config import config
 
 # litellm.set_verbose=True
-litellm.modify_params=True
+litellm.modify_params = True
 
 # Constants
 MAX_RETRIES = 2
 RATE_LIMIT_DELAY = 30
 RETRY_DELAY = 0.1
 
+
 class LLMError(Exception):
     """Base exception for LLM-related errors."""
+
     pass
+
 
 class LLMRetryError(LLMError):
     """Exception raised when retries are exhausted."""
+
     pass
+
 
 def setup_api_keys() -> None:
     """Set up API keys from environment variables."""
-    providers = ['OPENAI', 'ANTHROPIC', 'GROQ', 'OPENROUTER']
+    providers = ["OPENAI", "ANTHROPIC", "GROQ", "OPENROUTER"]
     for provider in providers:
-        key = getattr(config, f'{provider}_API_KEY')
+        key = getattr(config, f"{provider}_API_KEY")
         if key:
             logger.debug(f"API key set for provider: {provider}")
         else:
@@ -47,7 +52,7 @@ def setup_api_keys() -> None:
 
     # Set up OpenRouter API base if not already set
     if config.OPENROUTER_API_KEY and config.OPENROUTER_API_BASE:
-        os.environ['OPENROUTER_API_BASE'] = config.OPENROUTER_API_BASE
+        os.environ["OPENROUTER_API_BASE"] = config.OPENROUTER_API_BASE
         logger.debug(f"Set OPENROUTER_API_BASE to {config.OPENROUTER_API_BASE}")
 
     # Set up AWS Bedrock credentials
@@ -58,11 +63,14 @@ def setup_api_keys() -> None:
     if aws_access_key and aws_secret_key and aws_region:
         logger.debug(f"AWS credentials set for Bedrock in region: {aws_region}")
         # Configure LiteLLM to use AWS credentials
-        os.environ['AWS_ACCESS_KEY_ID'] = aws_access_key
-        os.environ['AWS_SECRET_ACCESS_KEY'] = aws_secret_key
-        os.environ['AWS_REGION_NAME'] = aws_region
+        os.environ["AWS_ACCESS_KEY_ID"] = aws_access_key
+        os.environ["AWS_SECRET_ACCESS_KEY"] = aws_secret_key
+        os.environ["AWS_REGION_NAME"] = aws_region
     else:
-        logger.warning(f"Missing AWS credentials for Bedrock integration - access_key: {bool(aws_access_key)}, secret_key: {bool(aws_secret_key)}, region: {aws_region}")
+        logger.warning(
+            f"Missing AWS credentials for Bedrock integration - access_key: {bool(aws_access_key)}, secret_key: {bool(aws_secret_key)}, region: {aws_region}"
+        )
+
 
 async def handle_error(error: Exception, attempt: int, max_attempts: int) -> None:
     """Handle API errors with appropriate delays and logging."""
@@ -70,6 +78,7 @@ async def handle_error(error: Exception, attempt: int, max_attempts: int) -> Non
     logger.warning(f"Error on attempt {attempt + 1}/{max_attempts}: {str(error)}")
     logger.debug(f"Waiting {delay} seconds before retry...")
     await asyncio.sleep(delay)
+
 
 def prepare_params(
     messages: List[Dict[str, Any]],
@@ -85,7 +94,7 @@ def prepare_params(
     top_p: Optional[float] = None,
     model_id: Optional[str] = None,
     enable_thinking: Optional[bool] = False,
-    reasoning_effort: Optional[str] = 'low'
+    reasoning_effort: Optional[str] = "low",
 ) -> Dict[str, Any]:
     """Prepare parameters for the API call."""
     params = {
@@ -112,15 +121,12 @@ def prepare_params(
             logger.debug(f"Skipping max_tokens for Claude 3.7 model: {model_name}")
             # Do not add any max_tokens parameter for Claude 3.7
         else:
-            param_name = "max_completion_tokens" if 'o1' in model_name else "max_tokens"
+            param_name = "max_completion_tokens" if "o1" in model_name else "max_tokens"
             params[param_name] = max_tokens
 
     # Add tools if provided
     if tools:
-        params.update({
-            "tools": tools,
-            "tool_choice": tool_choice
-        })
+        params.update({"tools": tools, "tool_choice": tool_choice})
         logger.debug(f"Added {len(tools)} tools to API parameters")
 
     # # Add Claude-specific headers
@@ -152,18 +158,20 @@ def prepare_params(
         logger.debug(f"Preparing AWS Bedrock parameters for model: {model_name}")
 
         if not model_id and "anthropic.claude-3-7-sonnet" in model_name:
-            params["model_id"] = "arn:aws:bedrock:us-west-2:935064898258:inference-profile/us.anthropic.claude-3-7-sonnet-20250219-v1:0"
+            params["model_id"] = (
+                "arn:aws:bedrock:us-west-2:935064898258:inference-profile/us.anthropic.claude-3-7-sonnet-20250219-v1:0"
+            )
             logger.debug(f"Auto-set model_id for Claude 3.7 Sonnet: {params['model_id']}")
 
     # Apply Anthropic prompt caching (minimal implementation)
     # Check model name *after* potential modifications (like adding bedrock/ prefix)
-    effective_model_name = params.get("model", model_name) # Use model from params if set, else original
+    effective_model_name = params.get("model", model_name)  # Use model from params if set, else original
     if "claude" in effective_model_name.lower() or "anthropic" in effective_model_name.lower():
-        messages = params["messages"] # Direct reference, modification affects params
+        messages = params["messages"]  # Direct reference, modification affects params
 
         # Ensure messages is a list
         if not isinstance(messages, list):
-            return params # Return early if messages format is unexpected
+            return params  # Return early if messages format is unexpected
 
         # 1. Process the first message if it's a system prompt with string content
         if messages and messages[0].get("role") == "system":
@@ -171,15 +179,19 @@ def prepare_params(
             if isinstance(content, str):
                 # Wrap the string content in the required list structure
                 messages[0]["content"] = [
-                    {"type": "text", "text": content, "cache_control": {"type": "ephemeral"}}
+                    {
+                        "type": "text",
+                        "text": content,
+                        "cache_control": {"type": "ephemeral"},
+                    }
                 ]
             elif isinstance(content, list):
-                 # If content is already a list, check if the first text block needs cache_control
-                 for item in content:
-                     if isinstance(item, dict) and item.get("type") == "text":
-                         if "cache_control" not in item:
-                             item["cache_control"] = {"type": "ephemeral"}
-                             break # Apply to the first text block only for system prompt
+                # If content is already a list, check if the first text block needs cache_control
+                for item in content:
+                    if isinstance(item, dict) and item.get("type") == "text":
+                        if "cache_control" not in item:
+                            item["cache_control"] = {"type": "ephemeral"}
+                            break  # Apply to the first text block only for system prompt
 
         # 2. Find and process relevant user and assistant messages
         last_user_idx = -1
@@ -199,7 +211,7 @@ def prepare_params(
 
             # Stop searching if we've found all needed messages
             if last_user_idx != -1 and second_last_user_idx != -1 and last_assistant_idx != -1:
-                 break
+                break
 
         # Helper function to apply cache control
         def apply_cache_control(message_idx: int, message_role: str):
@@ -211,13 +223,17 @@ def prepare_params(
 
             if isinstance(content, str):
                 message["content"] = [
-                    {"type": "text", "text": content, "cache_control": {"type": "ephemeral"}}
+                    {
+                        "type": "text",
+                        "text": content,
+                        "cache_control": {"type": "ephemeral"},
+                    }
                 ]
             elif isinstance(content, list):
                 for item in content:
                     if isinstance(item, dict) and item.get("type") == "text":
                         if "cache_control" not in item:
-                           item["cache_control"] = {"type": "ephemeral"}
+                            item["cache_control"] = {"type": "ephemeral"}
 
         # Apply cache control to the identified messages
         apply_cache_control(last_user_idx, "last user")
@@ -229,12 +245,13 @@ def prepare_params(
     is_anthropic = "anthropic" in effective_model_name.lower() or "claude" in effective_model_name.lower()
 
     if is_anthropic and use_thinking:
-        effort_level = reasoning_effort if reasoning_effort else 'low'
+        effort_level = reasoning_effort if reasoning_effort else "low"
         params["reasoning_effort"] = effort_level
-        params["temperature"] = 1.0 # Required by Anthropic when reasoning_effort is used
+        params["temperature"] = 1.0  # Required by Anthropic when reasoning_effort is used
         logger.info(f"Anthropic thinking enabled with reasoning_effort='{effort_level}'")
 
     return params
+
 
 async def make_llm_api_call(
     messages: List[Dict[str, Any]],
@@ -250,7 +267,7 @@ async def make_llm_api_call(
     top_p: Optional[float] = None,
     model_id: Optional[str] = None,
     enable_thinking: Optional[bool] = False,
-    reasoning_effort: Optional[str] = 'low'
+    reasoning_effort: Optional[str] = "low",
 ) -> Union[Dict[str, Any], AsyncGenerator]:
     """
     Make an API call to a language model using LiteLLM.
@@ -295,7 +312,7 @@ async def make_llm_api_call(
         top_p=top_p,
         model_id=model_id,
         enable_thinking=enable_thinking,
-        reasoning_effort=reasoning_effort
+        reasoning_effort=reasoning_effort,
     )
     last_error = None
     for attempt in range(MAX_RETRIES):
@@ -308,7 +325,11 @@ async def make_llm_api_call(
             logger.debug(f"Response: {response}")
             return response
 
-        except (litellm.exceptions.RateLimitError, OpenAIError, json.JSONDecodeError) as e:
+        except (
+            litellm.exceptions.RateLimitError,
+            OpenAIError,
+            json.JSONDecodeError,
+        ) as e:
             last_error = e
             await handle_error(e, attempt, MAX_RETRIES)
 
@@ -322,15 +343,15 @@ async def make_llm_api_call(
     logger.error(error_msg, exc_info=True)
     raise LLMRetryError(error_msg)
 
+
 # Initialize API keys on module import
 setup_api_keys()
+
 
 # Test code for OpenRouter integration
 async def test_openrouter():
     """Test the OpenRouter integration with a simple query."""
-    test_messages = [
-        {"role": "user", "content": "Hello, can you give me a quick test response?"}
-    ]
+    test_messages = [{"role": "user", "content": "Hello, can you give me a quick test response?"}]
 
     try:
         # Test with standard OpenRouter model
@@ -339,7 +360,7 @@ async def test_openrouter():
             model_name="openrouter/openai/gpt-4o-mini",
             messages=test_messages,
             temperature=0.7,
-            max_tokens=100
+            max_tokens=100,
         )
         print(f"Response: {response.choices[0].message.content}")
 
@@ -349,7 +370,7 @@ async def test_openrouter():
             model_name="openrouter/deepseek/deepseek-r1-distill-llama-70b",
             messages=test_messages,
             temperature=0.7,
-            max_tokens=100
+            max_tokens=100,
         )
         print(f"Response: {response.choices[0].message.content}")
         print(f"Model used: {response.model}")
@@ -360,7 +381,7 @@ async def test_openrouter():
             model_name="openrouter/mistralai/mixtral-8x7b-instruct",
             messages=test_messages,
             temperature=0.7,
-            max_tokens=100
+            max_tokens=100,
         )
         print(f"Response: {response.choices[0].message.content}")
         print(f"Model used: {response.model}")
@@ -370,11 +391,10 @@ async def test_openrouter():
         print(f"Error testing OpenRouter: {str(e)}")
         return False
 
+
 async def test_bedrock():
     """Test the AWS Bedrock integration with a simple query."""
-    test_messages = [
-        {"role": "user", "content": "Hello, can you give me a quick test response?"}
-    ]
+    test_messages = [{"role": "user", "content": "Hello, can you give me a quick test response?"}]
 
     try:
         response = await make_llm_api_call(
@@ -392,6 +412,7 @@ async def test_bedrock():
     except Exception as e:
         print(f"Error testing Bedrock: {str(e)}")
         return False
+
 
 if __name__ == "__main__":
     import asyncio

@@ -1,6 +1,7 @@
 from typing import List, Optional, Union
 from agentpress.tool import Tool, ToolResult, openapi_schema, xml_schema
 
+
 class MessageTool(Tool):
     """Tool for user communication and interaction.
 
@@ -13,37 +14,44 @@ class MessageTool(Tool):
 
     # Commented out as we are just doing this via prompt as there is no need to call it as a tool
 
-    @openapi_schema({
-        "type": "function",
-        "function": {
-            "name": "ask",
-            "description": "Ask user a question and wait for response. Use for: 1) Requesting clarification on ambiguous requirements, 2) Seeking confirmation before proceeding with high-impact changes, 3) Gathering additional information needed to complete a task, 4) Offering options and requesting user preference, 5) Validating assumptions when critical to task success. IMPORTANT: Use this tool only when user input is essential to proceed. Always provide clear context and options when applicable. Include relevant attachments when the question relates to specific files or resources.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "text": {
-                        "type": "string",
-                        "description": "Question text to present to user - should be specific and clearly indicate what information you need. Include: 1) Clear question or request, 2) Context about why the input is needed, 3) Available options if applicable, 4) Impact of different choices, 5) Any relevant constraints or considerations."
+    @openapi_schema(
+        {
+            "type": "function",
+            "function": {
+                "name": "ask",
+                "description": "Ask user a question and wait for response. Use for: 1) Requesting clarification on ambiguous requirements, 2) Seeking confirmation before proceeding with high-impact changes, 3) Gathering additional information needed to complete a task, 4) Offering options and requesting user preference, 5) Validating assumptions when critical to task success. IMPORTANT: Use this tool only when user input is essential to proceed. Always provide clear context and options when applicable. Include relevant attachments when the question relates to specific files or resources.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "text": {
+                            "type": "string",
+                            "description": "Question text to present to user - should be specific and clearly indicate what information you need. Include: 1) Clear question or request, 2) Context about why the input is needed, 3) Available options if applicable, 4) Impact of different choices, 5) Any relevant constraints or considerations.",
+                        },
+                        "attachments": {
+                            "anyOf": [
+                                {"type": "string"},
+                                {"items": {"type": "string"}, "type": "array"},
+                            ],
+                            "description": "(Optional) List of files or URLs to attach to the question. Include when: 1) Question relates to specific files or configurations, 2) User needs to review content before answering, 3) Options or choices are documented in files, 4) Supporting evidence or context is needed. Always use relative paths to /workspace directory.",
+                        },
                     },
-                    "attachments": {
-                        "anyOf": [
-                            {"type": "string"},
-                            {"items": {"type": "string"}, "type": "array"}
-                        ],
-                        "description": "(Optional) List of files or URLs to attach to the question. Include when: 1) Question relates to specific files or configurations, 2) User needs to review content before answering, 3) Options or choices are documented in files, 4) Supporting evidence or context is needed. Always use relative paths to /workspace directory."
-                    }
+                    "required": ["text"],
                 },
-                "required": ["text"]
-            }
+            },
         }
-    })
+    )
     @xml_schema(
         tag_name="ask",
         mappings=[
             {"param_name": "text", "node_type": "content", "path": "."},
-            {"param_name": "attachments", "node_type": "attribute", "path": ".", "required": False}
+            {
+                "param_name": "attachments",
+                "node_type": "attribute",
+                "path": ".",
+                "required": False,
+            },
         ],
-        example='''
+        example="""
 Ask user a question and wait for response. Use for: 1) Requesting clarification on ambiguous requirements, 2) Seeking confirmation before proceeding with high-impact changes, 3) Gathering additional information needed to complete a task, 4) Offering options and requesting user preference, 5) Validating assumptions when critical to task success. IMPORTANT: Use this tool only when user input is essential to proceed. Always provide clear context and options when applicable. Include relevant attachments when the question relates to specific files or resources.
 
         <!-- Use ask when you need user input to proceed -->
@@ -64,7 +72,7 @@ Ask user a question and wait for response. Use for: 1) Requesting clarification 
 
             This information will help me make sure the cake meets your expectations for the celebration.
         </ask>
-        '''
+        """,
     )
     async def ask(self, text: str, attachments: Optional[Union[str, List[str]]] = None) -> ToolResult:
         """Ask the user a question and wait for a response.
@@ -85,37 +93,44 @@ Ask user a question and wait for response. Use for: 1) Requesting clarification 
         except Exception as e:
             return self.fail_response(f"Error asking user: {str(e)}")
 
-    @openapi_schema({
-        "type": "function",
-        "function": {
-            "name": "web_browser_takeover",
-            "description": "Request user takeover of browser interaction. Use this tool when: 1) The page requires complex human interaction that automated tools cannot handle, 2) Authentication or verification steps require human input, 3) The page has anti-bot measures that prevent automated access, 4) Complex form filling or navigation is needed, 5) The page requires human verification (CAPTCHA, etc.). IMPORTANT: This tool should be used as a last resort after web-search and crawl-webpage have failed, and when direct browser tools are insufficient. Always provide clear context about why takeover is needed and what actions the user should take.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "text": {
-                        "type": "string",
-                        "description": "Instructions for the user about what actions to take in the browser. Include: 1) Clear explanation of why takeover is needed, 2) Specific steps the user should take, 3) What information to look for or extract, 4) How to indicate when they're done, 5) Any important context about the current page state."
+    @openapi_schema(
+        {
+            "type": "function",
+            "function": {
+                "name": "web_browser_takeover",
+                "description": "Request user takeover of browser interaction. Use this tool when: 1) The page requires complex human interaction that automated tools cannot handle, 2) Authentication or verification steps require human input, 3) The page has anti-bot measures that prevent automated access, 4) Complex form filling or navigation is needed, 5) The page requires human verification (CAPTCHA, etc.). IMPORTANT: This tool should be used as a last resort after web-search and crawl-webpage have failed, and when direct browser tools are insufficient. Always provide clear context about why takeover is needed and what actions the user should take.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "text": {
+                            "type": "string",
+                            "description": "Instructions for the user about what actions to take in the browser. Include: 1) Clear explanation of why takeover is needed, 2) Specific steps the user should take, 3) What information to look for or extract, 4) How to indicate when they're done, 5) Any important context about the current page state.",
+                        },
+                        "attachments": {
+                            "anyOf": [
+                                {"type": "string"},
+                                {"items": {"type": "string"}, "type": "array"},
+                            ],
+                            "description": "(Optional) List of files or URLs to attach to the takeover request. Include when: 1) Screenshots or visual references are needed, 2) Previous search results or crawled content is relevant, 3) Supporting documentation is required. Always use relative paths to /workspace directory.",
+                        },
                     },
-                    "attachments": {
-                        "anyOf": [
-                            {"type": "string"},
-                            {"items": {"type": "string"}, "type": "array"}
-                        ],
-                        "description": "(Optional) List of files or URLs to attach to the takeover request. Include when: 1) Screenshots or visual references are needed, 2) Previous search results or crawled content is relevant, 3) Supporting documentation is required. Always use relative paths to /workspace directory."
-                    }
+                    "required": ["text"],
                 },
-                "required": ["text"]
-            }
+            },
         }
-    })
+    )
     @xml_schema(
         tag_name="web-browser-takeover",
         mappings=[
             {"param_name": "text", "node_type": "content", "path": "."},
-            {"param_name": "attachments", "node_type": "attribute", "path": ".", "required": False}
+            {
+                "param_name": "attachments",
+                "node_type": "attribute",
+                "path": ".",
+                "required": False,
+            },
         ],
-        example='''
+        example="""
         <!-- Use web-browser-takeover when automated tools cannot handle the page interaction -->
         <!-- Examples of when takeover is needed: -->
         <!-- 1. CAPTCHA or human verification required -->
@@ -130,7 +145,7 @@ Ask user a question and wait for response. Use for: 1) Requesting clarification 
 
             If you encounter any issues or need to take additional steps, please let me know.
         </web-browser-takeover>
-        '''
+        """,
     )
     async def web_browser_takeover(self, text: str, attachments: Optional[Union[str, List[str]]] = None) -> ToolResult:
         """Request user takeover of browser interaction.
@@ -151,95 +166,93 @@ Ask user a question and wait for response. Use for: 1) Requesting clarification 
         except Exception as e:
             return self.fail_response(f"Error requesting browser takeover: {str(e)}")
 
-#     @openapi_schema({
-#         "type": "function",
-#         "function": {
-#             "name": "inform",
-#             "description": "Inform the user about progress, completion of a major step, or important context. Use this tool: 1) To provide updates between major sections of work, 2) After accomplishing significant milestones, 3) When transitioning to a new phase of work, 4) To confirm actions were completed successfully, 5) To provide context about upcoming steps. IMPORTANT: Use FREQUENTLY throughout execution to provide UI context to the user. The user CANNOT respond to this tool - they can only respond to the 'ask' tool. Use this tool to keep the user informed without requiring their input.",
-#             "parameters": {
-#                 "type": "object",
-#                 "properties": {
-#                     "text": {
-#                         "type": "string",
-#                         "description": "Information to present to the user. Include: 1) Clear statement of what has been accomplished or what is happening, 2) Relevant context or impact, 3) Brief indication of next steps if applicable."
-#                     },
-#                     "attachments": {
-#                         "anyOf": [
-#                             {"type": "string"},
-#                             {"items": {"type": "string"}, "type": "array"}
-#                         ],
-#                         "description": "(Optional) List of files or URLs to attach to the information. Include when: 1) Information relates to specific files or resources, 2) Showing intermediate results or outputs, 3) Providing supporting documentation. Always use relative paths to /workspace directory."
-#                     }
-#                 },
-#                 "required": ["text"]
-#             }
-#         }
-#     })
-#     @xml_schema(
-#         tag_name="inform",
-#         mappings=[
-#             {"param_name": "text", "node_type": "content", "path": "."},
-#             {"param_name": "attachments", "node_type": "attribute", "path": ".", "required": False}
-#         ],
-#         example='''
+    #     @openapi_schema({
+    #         "type": "function",
+    #         "function": {
+    #             "name": "inform",
+    #             "description": "Inform the user about progress, completion of a major step, or important context. Use this tool: 1) To provide updates between major sections of work, 2) After accomplishing significant milestones, 3) When transitioning to a new phase of work, 4) To confirm actions were completed successfully, 5) To provide context about upcoming steps. IMPORTANT: Use FREQUENTLY throughout execution to provide UI context to the user. The user CANNOT respond to this tool - they can only respond to the 'ask' tool. Use this tool to keep the user informed without requiring their input.",
+    #             "parameters": {
+    #                 "type": "object",
+    #                 "properties": {
+    #                     "text": {
+    #                         "type": "string",
+    #                         "description": "Information to present to the user. Include: 1) Clear statement of what has been accomplished or what is happening, 2) Relevant context or impact, 3) Brief indication of next steps if applicable."
+    #                     },
+    #                     "attachments": {
+    #                         "anyOf": [
+    #                             {"type": "string"},
+    #                             {"items": {"type": "string"}, "type": "array"}
+    #                         ],
+    #                         "description": "(Optional) List of files or URLs to attach to the information. Include when: 1) Information relates to specific files or resources, 2) Showing intermediate results or outputs, 3) Providing supporting documentation. Always use relative paths to /workspace directory."
+    #                     }
+    #                 },
+    #                 "required": ["text"]
+    #             }
+    #         }
+    #     })
+    #     @xml_schema(
+    #         tag_name="inform",
+    #         mappings=[
+    #             {"param_name": "text", "node_type": "content", "path": "."},
+    #             {"param_name": "attachments", "node_type": "attribute", "path": ".", "required": False}
+    #         ],
+    #         example='''
 
-# Inform the user about progress, completion of a major step, or important context. Use this tool: 1) To provide updates between major sections of work, 2) After accomplishing significant milestones, 3) When transitioning to a new phase of work, 4) To confirm actions were completed successfully, 5) To provide context about upcoming steps. IMPORTANT: Use FREQUENTLY throughout execution to provide UI context to the user. The user CANNOT respond to this tool - they can only respond to the 'ask' tool. Use this tool to keep the user informed without requiring their input."
+    # Inform the user about progress, completion of a major step, or important context. Use this tool: 1) To provide updates between major sections of work, 2) After accomplishing significant milestones, 3) When transitioning to a new phase of work, 4) To confirm actions were completed successfully, 5) To provide context about upcoming steps. IMPORTANT: Use FREQUENTLY throughout execution to provide UI context to the user. The user CANNOT respond to this tool - they can only respond to the 'ask' tool. Use this tool to keep the user informed without requiring their input."
 
-#         <!-- Use inform FREQUENTLY to provide UI context and progress updates - THE USER CANNOT RESPOND to this tool -->
-#         <!-- The user can ONLY respond to the ask tool, not to inform -->
-#         <!-- Examples of when to use inform: -->
-#         <!-- 1. Completing major milestones -->
-#         <!-- 2. Transitioning between work phases -->
-#         <!-- 3. Confirming important actions -->
-#         <!-- 4. Providing context about upcoming steps -->
-#         <!-- 5. Sharing significant intermediate results -->
-#         <!-- 6. Providing regular UI updates throughout execution -->
+    #         <!-- Use inform FREQUENTLY to provide UI context and progress updates - THE USER CANNOT RESPOND to this tool -->
+    #         <!-- The user can ONLY respond to the ask tool, not to inform -->
+    #         <!-- Examples of when to use inform: -->
+    #         <!-- 1. Completing major milestones -->
+    #         <!-- 2. Transitioning between work phases -->
+    #         <!-- 3. Confirming important actions -->
+    #         <!-- 4. Providing context about upcoming steps -->
+    #         <!-- 5. Sharing significant intermediate results -->
+    #         <!-- 6. Providing regular UI updates throughout execution -->
 
-#         <inform attachments="analysis_results.csv,summary_chart.png">
-#             I've completed the data analysis of the sales figures. Key findings include:
-#             - Q4 sales were 28% higher than Q3
-#             - Product line A showed the strongest performance
-#             - Three regions missed their targets
+    #         <inform attachments="analysis_results.csv,summary_chart.png">
+    #             I've completed the data analysis of the sales figures. Key findings include:
+    #             - Q4 sales were 28% higher than Q3
+    #             - Product line A showed the strongest performance
+    #             - Three regions missed their targets
 
-#             I'll now proceed with creating the executive summary report based on these findings.
-#         </inform>
-#         '''
-#     )
-#     async def inform(self, text: str, attachments: Optional[Union[str, List[str]]] = None) -> ToolResult:
-#         """Inform the user about progress or important updates without requiring a response.
+    #             I'll now proceed with creating the executive summary report based on these findings.
+    #         </inform>
+    #         '''
+    #     )
+    #     async def inform(self, text: str, attachments: Optional[Union[str, List[str]]] = None) -> ToolResult:
+    #         """Inform the user about progress or important updates without requiring a response.
 
-#         Args:
-#             text: The information to present to the user
-#             attachments: Optional file paths or URLs to attach
+    #         Args:
+    #             text: The information to present to the user
+    #             attachments: Optional file paths or URLs to attach
 
-#         Returns:
-#             ToolResult indicating the information was successfully sent
-#         """
-#         try:
-#             # Convert single attachment to list for consistent handling
-#             if attachments and isinstance(attachments, str):
-#                 attachments = [attachments]
+    #         Returns:
+    #             ToolResult indicating the information was successfully sent
+    #         """
+    #         try:
+    #             # Convert single attachment to list for consistent handling
+    #             if attachments and isinstance(attachments, str):
+    #                 attachments = [attachments]
 
-#             return self.success_response({"status": "Information sent"})
-#         except Exception as e:
-#             return self.fail_response(f"Error informing user: {str(e)}")
+    #             return self.success_response({"status": "Information sent"})
+    #         except Exception as e:
+    #             return self.fail_response(f"Error informing user: {str(e)}")
 
-    @openapi_schema({
-        "type": "function",
-        "function": {
-            "name": "complete",
-            "description": "A special tool to indicate you have completed all tasks and are about to enter complete state. Use ONLY when: 1) All tasks in todo.md are marked complete [x], 2) The user's original request has been fully addressed, 3) There are no pending actions or follow-ups required, 4) You've delivered all final outputs and results to the user. IMPORTANT: This is the ONLY way to properly terminate execution. Never use this tool unless ALL tasks are complete and verified. Always ensure you've provided all necessary outputs and references before using this tool.",
-            "parameters": {
-                "type": "object",
-                "properties": {},
-                "required": []
-            }
+    @openapi_schema(
+        {
+            "type": "function",
+            "function": {
+                "name": "complete",
+                "description": "A special tool to indicate you have completed all tasks and are about to enter complete state. Use ONLY when: 1) All tasks in todo.md are marked complete [x], 2) The user's original request has been fully addressed, 3) There are no pending actions or follow-ups required, 4) You've delivered all final outputs and results to the user. IMPORTANT: This is the ONLY way to properly terminate execution. Never use this tool unless ALL tasks are complete and verified. Always ensure you've provided all necessary outputs and references before using this tool.",
+                "parameters": {"type": "object", "properties": {}, "required": []},
+            },
         }
-    })
+    )
     @xml_schema(
         tag_name="complete",
         mappings=[],
-        example='''
+        example="""
         <!-- Use complete ONLY when ALL tasks are finished -->
         <!-- Prerequisites for using complete: -->
         <!-- 1. All todo.md items marked complete [x] -->
@@ -252,7 +265,7 @@ Ask user a question and wait for response. Use for: 1) Requesting clarification 
         <!-- This tool indicates successful completion of all tasks -->
         <!-- The system will stop execution after this tool is used -->
         </complete>
-        '''
+        """,
     )
     async def complete(self) -> ToolResult:
         """Indicate that the agent has completed all tasks and is entering complete state.
@@ -275,14 +288,14 @@ if __name__ == "__main__":
         # Test question
         ask_result = await message_tool.ask(
             text="Would you like to proceed with the next phase?",
-            attachments="summary.pdf"
+            attachments="summary.pdf",
         )
         print("Question result:", ask_result)
 
         # Test inform
         inform_result = await message_tool.inform(
             text="Completed analysis of data. Processing results now.",
-            attachments="analysis.pdf"
+            attachments="analysis.pdf",
         )
         print("Inform result:", inform_result)
 

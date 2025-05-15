@@ -16,15 +16,13 @@ from services.llm import make_llm_api_call
 from agentpress.tool import Tool
 from agentpress.tool_registry import ToolRegistry
 from agentpress.context_manager import ContextManager
-from agentpress.response_processor import (
-    ResponseProcessor,
-    ProcessorConfig
-)
+from agentpress.response_processor import ResponseProcessor, ProcessorConfig
 from services.supabase import DBConnection
 from utils.logger import logger
 
 # Type alias for tool choice
 ToolChoice = Literal["auto", "required", "none"]
+
 
 class ThreadManager:
     """Manages conversation threads with LLM models and tool execution.
@@ -35,18 +33,20 @@ class ThreadManager:
     """
 
     def __init__(self):
-        """Initialize ThreadManager.
-
-        """
+        """Initialize ThreadManager."""
         self.db = DBConnection()
         self.tool_registry = ToolRegistry()
         self.response_processor = ResponseProcessor(
-            tool_registry=self.tool_registry,
-            add_message_callback=self.add_message
+            tool_registry=self.tool_registry, add_message_callback=self.add_message
         )
         self.context_manager = ContextManager()
 
-    async def add_tool(self, tool_class: Type[Tool], function_names: Optional[List[str]] = None, **kwargs):
+    async def add_tool(
+        self,
+        tool_class: Type[Tool],
+        function_names: Optional[List[str]] = None,
+        **kwargs,
+    ):
         """Add a tool to the ThreadManager."""
         await self.tool_registry.register_tool(tool_class, function_names, **kwargs)
 
@@ -56,7 +56,7 @@ class ThreadManager:
         type: str,
         content: Union[Dict[str, Any], List[Any], str],
         is_llm_message: bool = False,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
     ):
         """Add a message to the thread in the database.
 
@@ -75,22 +75,29 @@ class ThreadManager:
 
         # Prepare data for insertion
         data_to_insert = {
-            'thread_id': thread_id,
-            'type': type,
-            'content': json.dumps(content) if isinstance(content, (dict, list)) else content,
-            'is_llm_message': is_llm_message,
-            'metadata': json.dumps(metadata or {}), # Ensure metadata is always a JSON object
+            "thread_id": thread_id,
+            "type": type,
+            "content": (json.dumps(content) if isinstance(content, (dict, list)) else content),
+            "is_llm_message": is_llm_message,
+            "metadata": json.dumps(metadata or {}),  # Ensure metadata is always a JSON object
         }
 
         try:
             # Add returning='representation' to get the inserted row data including the id
-            result = await client.table('messages').insert(data_to_insert, returning='representation').execute()
+            result = await client.table("messages").insert(data_to_insert, returning="representation").execute()
             logger.info(f"Successfully added message to thread {thread_id}")
 
-            if result.data and len(result.data) > 0 and isinstance(result.data[0], dict) and 'message_id' in result.data[0]:
+            if (
+                result.data
+                and len(result.data) > 0
+                and isinstance(result.data[0], dict)
+                and "message_id" in result.data[0]
+            ):
                 return result.data[0]
             else:
-                logger.error(f"Insert operation failed or did not return expected data structure for thread {thread_id}. Result data: {result.data}")
+                logger.error(
+                    f"Insert operation failed or did not return expected data structure for thread {thread_id}. Result data: {result.data}"
+                )
                 return None
         except Exception as e:
             logger.error(f"Failed to add message to thread {thread_id}: {str(e)}", exc_info=True)
@@ -112,7 +119,7 @@ class ThreadManager:
         client = await self.db.client
 
         try:
-            result = await client.rpc('get_llm_formatted_messages', {'p_thread_id': thread_id}).execute()
+            result = await client.rpc("get_llm_formatted_messages", {"p_thread_id": thread_id}).execute()
 
             # Parse the returned data which might be stringified JSON
             if not result.data:
@@ -132,17 +139,22 @@ class ThreadManager:
 
             # Ensure tool_calls have properly formatted function arguments
             for message in messages:
-                if message.get('tool_calls'):
-                    for tool_call in message['tool_calls']:
-                        if isinstance(tool_call, dict) and 'function' in tool_call:
+                if message.get("tool_calls"):
+                    for tool_call in message["tool_calls"]:
+                        if isinstance(tool_call, dict) and "function" in tool_call:
                             # Ensure function.arguments is a string
-                            if 'arguments' in tool_call['function'] and not isinstance(tool_call['function']['arguments'], str):
-                                tool_call['function']['arguments'] = json.dumps(tool_call['function']['arguments'])
+                            if "arguments" in tool_call["function"] and not isinstance(
+                                tool_call["function"]["arguments"], str
+                            ):
+                                tool_call["function"]["arguments"] = json.dumps(tool_call["function"]["arguments"])
 
             return messages
 
         except Exception as e:
-            logger.error(f"Failed to get messages for thread {thread_id}: {str(e)}", exc_info=True)
+            logger.error(
+                f"Failed to get messages for thread {thread_id}: {str(e)}",
+                exc_info=True,
+            )
             return []
 
     async def run_thread(
@@ -160,8 +172,8 @@ class ThreadManager:
         max_tool_calls: int = 0,
         include_xml_examples: bool = False,
         enable_thinking: Optional[bool] = False,
-        reasoning_effort: Optional[str] = 'low',
-        enable_context_manager: bool = True
+        reasoning_effort: Optional[str] = "low",
+        enable_context_manager: bool = True,
     ) -> Union[Dict[str, Any], AsyncGenerator]:
         """Run a conversation thread with LLM integration and tool execution.
 
@@ -228,23 +240,27 @@ Here are the XML tools available with examples:
                 # except Exception as e:
                 #     logger.error(f"Failed to save XML examples to file: {e}")
 
-                system_content = working_system_prompt.get('content')
+                system_content = working_system_prompt.get("content")
 
                 if isinstance(system_content, str):
-                    working_system_prompt['content'] += examples_content
+                    working_system_prompt["content"] += examples_content
                     logger.debug("Appended XML examples to string system prompt content.")
                 elif isinstance(system_content, list):
                     appended = False
-                    for item in working_system_prompt['content']: # Modify the copy
-                        if isinstance(item, dict) and item.get('type') == 'text' and 'text' in item:
-                            item['text'] += examples_content
+                    for item in working_system_prompt["content"]:  # Modify the copy
+                        if isinstance(item, dict) and item.get("type") == "text" and "text" in item:
+                            item["text"] += examples_content
                             logger.debug("Appended XML examples to the first text block in list system prompt content.")
                             appended = True
                             break
                     if not appended:
-                        logger.warning("System prompt content is a list but no text block found to append XML examples.")
+                        logger.warning(
+                            "System prompt content is a list but no text block found to append XML examples."
+                        )
                 else:
-                    logger.warning(f"System prompt content is of unexpected type ({type(system_content)}), cannot add XML examples.")
+                    logger.warning(
+                        f"System prompt content is of unexpected type ({type(system_content)}), cannot add XML examples."
+                    )
         # Control whether we need to auto-continue due to tool_calls finish reason
         auto_continue = True
         auto_continue_count = 0
@@ -263,10 +279,13 @@ Here are the XML tools available with examples:
                 token_count = 0
                 try:
                     from litellm import token_counter
+
                     # Use the potentially modified working_system_prompt for token counting
                     token_count = token_counter(model=llm_model, messages=[working_system_prompt] + messages)
                     token_threshold = self.context_manager.token_threshold
-                    logger.info(f"Thread {thread_id} token count: {token_count}/{token_threshold} ({(token_count/token_threshold)*100:.1f}%)")
+                    logger.info(
+                        f"Thread {thread_id} token count: {token_count}/{token_threshold} ({(token_count/token_threshold)*100:.1f}%)"
+                    )
 
                     # if token_count >= token_threshold and enable_context_manager:
                     #     logger.info(f"Thread token count ({token_count}) exceeds threshold ({token_threshold}), summarizing...")
@@ -297,7 +316,7 @@ Here are the XML tools available with examples:
                 # Find the last user message index
                 last_user_index = -1
                 for i, msg in enumerate(messages):
-                    if msg.get('role') == 'user':
+                    if msg.get("role") == "user":
                         last_user_index = i
 
                 # Insert temporary message before the last user message if it exists
@@ -317,21 +336,23 @@ Here are the XML tools available with examples:
                 openapi_tool_schemas = None
                 if processor_config.native_tool_calling:
                     openapi_tool_schemas = self.tool_registry.get_openapi_schemas()
-                    logger.debug(f"Retrieved {len(openapi_tool_schemas) if openapi_tool_schemas else 0} OpenAPI tool schemas")
+                    logger.debug(
+                        f"Retrieved {len(openapi_tool_schemas) if openapi_tool_schemas else 0} OpenAPI tool schemas"
+                    )
 
                 # 5. Make LLM API call
                 logger.debug("Making LLM API call")
                 try:
                     llm_response = await make_llm_api_call(
-                        prepared_messages, # Pass the potentially modified messages
+                        prepared_messages,  # Pass the potentially modified messages
                         llm_model,
                         temperature=llm_temperature,
                         max_tokens=llm_max_tokens,
                         tools=openapi_tool_schemas,
-                        tool_choice=tool_choice if processor_config.native_tool_calling else None,
+                        tool_choice=(tool_choice if processor_config.native_tool_calling else None),
                         stream=stream,
                         enable_thinking=enable_thinking,
-                        reasoning_effort=reasoning_effort
+                        reasoning_effort=reasoning_effort,
                     )
                     logger.debug("Successfully received raw LLM API response stream/object")
 
@@ -347,7 +368,7 @@ Here are the XML tools available with examples:
                         thread_id=thread_id,
                         config=processor_config,
                         prompt_messages=prepared_messages,
-                        llm_model=llm_model
+                        llm_model=llm_model,
                     )
 
                     return response_generator
@@ -359,17 +380,14 @@ Here are the XML tools available with examples:
                         thread_id=thread_id,
                         config=processor_config,
                         prompt_messages=prepared_messages,
-                        llm_model=llm_model
+                        llm_model=llm_model,
                     )
-                    return response_generator # Return the generator
+                    return response_generator  # Return the generator
 
             except Exception as e:
                 logger.error(f"Error in run_thread: {str(e)}", exc_info=True)
                 # Return the error as a dict to be handled by the caller
-                return {
-                    "status": "error",
-                    "message": str(e)
-                }
+                return {"status": "error", "message": str(e)}
 
         # Define a wrapper generator that handles auto-continue logic
         async def auto_continue_wrapper():
@@ -385,7 +403,11 @@ Here are the XML tools available with examples:
                     response_gen = await _run_once(temporary_message if auto_continue_count == 0 else None)
 
                     # Handle error responses
-                    if isinstance(response_gen, dict) and "status" in response_gen and response_gen["status"] == "error":
+                    if (
+                        isinstance(response_gen, dict)
+                        and "status" in response_gen
+                        and response_gen["status"] == "error"
+                    ):
                         logger.error(f"Error in auto_continue_wrapper: {response_gen.get('message', 'Unknown error')}")
                         yield response_gen
                         return  # Exit the generator on error
@@ -394,18 +416,22 @@ Here are the XML tools available with examples:
                     try:
                         async for chunk in response_gen:
                             # Check if this is a finish reason chunk with tool_calls or xml_tool_limit_reached
-                            if chunk.get('type') == 'finish':
-                                if chunk.get('finish_reason') == 'tool_calls':
+                            if chunk.get("type") == "finish":
+                                if chunk.get("finish_reason") == "tool_calls":
                                     # Only auto-continue if enabled (max > 0)
                                     if native_max_auto_continues > 0:
-                                        logger.info(f"Detected finish_reason='tool_calls', auto-continuing ({auto_continue_count + 1}/{native_max_auto_continues})")
+                                        logger.info(
+                                            f"Detected finish_reason='tool_calls', auto-continuing ({auto_continue_count + 1}/{native_max_auto_continues})"
+                                        )
                                         auto_continue = True
                                         auto_continue_count += 1
                                         # Don't yield the finish chunk to avoid confusing the client
                                         continue
-                                elif chunk.get('finish_reason') == 'xml_tool_limit_reached':
+                                elif chunk.get("finish_reason") == "xml_tool_limit_reached":
                                     # Don't auto-continue if XML tool limit was reached
-                                    logger.info(f"Detected finish_reason='xml_tool_limit_reached', stopping auto-continue")
+                                    logger.info(
+                                        f"Detected finish_reason='xml_tool_limit_reached', stopping auto-continue"
+                                    )
                                     auto_continue = False
                                     # Still yield the chunk to inform the client
 
@@ -417,11 +443,14 @@ Here are the XML tools available with examples:
                             break
                     except Exception as e:
                         # If there's an exception, log it, yield an error status, and stop execution
-                        logger.error(f"Error in auto_continue_wrapper generator: {str(e)}", exc_info=True)
+                        logger.error(
+                            f"Error in auto_continue_wrapper generator: {str(e)}",
+                            exc_info=True,
+                        )
                         yield {
                             "type": "status",
                             "status": "error",
-                            "message": f"Error in thread processing: {str(e)}"
+                            "message": f"Error in thread processing: {str(e)}",
                         }
                         return  # Exit the generator on any error
                 except Exception as outer_e:
@@ -430,7 +459,7 @@ Here are the XML tools available with examples:
                     yield {
                         "type": "status",
                         "status": "error",
-                        "message": f"Error executing thread: {str(outer_e)}"
+                        "message": f"Error executing thread: {str(outer_e)}",
                     }
                     return  # Exit immediately on exception from _run_once
 
@@ -439,7 +468,7 @@ Here are the XML tools available with examples:
                 logger.warning(f"Reached maximum auto-continue limit ({native_max_auto_continues}), stopping.")
                 yield {
                     "type": "content",
-                    "content": f"\n[Agent reached maximum auto-continue limit of {native_max_auto_continues}]"
+                    "content": f"\n[Agent reached maximum auto-continue limit of {native_max_auto_continues}]",
                 }
 
         # If auto-continue is disabled (max=0), just run once

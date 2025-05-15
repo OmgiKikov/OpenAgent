@@ -22,12 +22,12 @@ def initialize():
     load_dotenv()
 
     # Get Redis configuration
-    redis_host = os.getenv('REDIS_HOST', 'redis')
-    redis_port = int(os.getenv('REDIS_PORT', 6379))
-    redis_password = os.getenv('REDIS_PASSWORD', '')
+    redis_host = os.getenv("REDIS_HOST", "redis")
+    redis_port = int(os.getenv("REDIS_PORT", 6379))
+    redis_password = os.getenv("REDIS_PASSWORD", "")
     # Convert string 'True'/'False' to boolean
-    redis_ssl_str = os.getenv('REDIS_SSL', 'False')
-    redis_ssl = redis_ssl_str.lower() == 'true'
+    redis_ssl_str = os.getenv("REDIS_SSL", "False")
+    redis_ssl = redis_ssl_str.lower() == "true"
 
     logger.info(f"Initializing Redis connection to {redis_host}:{redis_port}")
 
@@ -41,7 +41,7 @@ def initialize():
         socket_timeout=5.0,
         socket_connect_timeout=5.0,
         retry_on_timeout=True,
-        health_check_interval=30
+        health_check_interval=30,
     )
 
     return client

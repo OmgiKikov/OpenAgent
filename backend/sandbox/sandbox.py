@@ -1,4 +1,10 @@
-from daytona_sdk import Daytona, DaytonaConfig, CreateSandboxParams, Sandbox, SessionExecuteRequest
+from daytona_sdk import (
+    Daytona,
+    DaytonaConfig,
+    CreateSandboxParams,
+    Sandbox,
+    SessionExecuteRequest,
+)
 from daytona_api_client.models.workspace_state import WorkspaceState
 from dotenv import load_dotenv
 from utils.logger import logger
@@ -10,7 +16,7 @@ logger.debug("Initializing Daytona sandbox configuration")
 daytona_config = DaytonaConfig(
     api_key=config.DAYTONA_API_KEY,
     server_url=config.DAYTONA_SERVER_URL,
-    target=config.DAYTONA_TARGET
+    target=config.DAYTONA_TARGET,
 )
 
 if daytona_config.api_key:
@@ -31,14 +37,15 @@ else:
 daytona = Daytona(daytona_config)
 logger.debug("Daytona client initialized")
 
+
 async def get_or_start_sandbox(sandbox_id: str):
     """Retrieve a sandbox by ID, check its state, and start it if needed."""
-    
+
     logger.info(f"Getting or starting sandbox with ID: {sandbox_id}")
-    
+
     try:
         sandbox = daytona.get_current_sandbox(sandbox_id)
-        
+
         # Check if sandbox needs to be started
         if sandbox.instance.state == WorkspaceState.ARCHIVED or sandbox.instance.state == WorkspaceState.STOPPED:
             logger.info(f"Sandbox is in {sandbox.instance.state} state. Starting...")
@@ -48,19 +55,20 @@ async def get_or_start_sandbox(sandbox_id: str):
                 # sleep(5)
                 # Refresh sandbox state after starting
                 sandbox = daytona.get_current_sandbox(sandbox_id)
-                
+
                 # Start supervisord in a session when restarting
                 start_supervisord_session(sandbox)
             except Exception as e:
                 logger.error(f"Error starting sandbox: {e}")
                 raise e
-        
+
         logger.info(f"Sandbox {sandbox_id} is ready")
         return sandbox
-        
+
     except Exception as e:
         logger.error(f"Error retrieving or starting sandbox: {str(e)}")
         raise e
+
 
 def start_supervisord_session(sandbox: Sandbox):
     """Start supervisord in a session."""
@@ -68,28 +76,32 @@ def start_supervisord_session(sandbox: Sandbox):
     try:
         logger.info(f"Creating session {session_id} for supervisord")
         sandbox.process.create_session(session_id)
-        
+
         # Execute supervisord command
-        sandbox.process.execute_session_command(session_id, SessionExecuteRequest(
-            command="exec /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf",
-            var_async=True
-        ))
+        sandbox.process.execute_session_command(
+            session_id,
+            SessionExecuteRequest(
+                command="exec /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf",
+                var_async=True,
+            ),
+        )
         logger.info(f"Supervisord started in session {session_id}")
     except Exception as e:
         logger.error(f"Error starting supervisord session: {str(e)}")
         raise e
 
+
 def create_sandbox(password: str, project_id: str = None):
     """Create a new sandbox with all required services configured and running."""
-    
+
     logger.debug("Creating new Daytona sandbox environment")
     logger.debug("Configuring sandbox with browser-use image and environment variables")
-    
+
     labels = None
     if project_id:
         logger.debug(f"Using sandbox_id as label: {project_id}")
-        labels = {'id': project_id}
-        
+        labels = {"id": project_id}
+
     params = CreateSandboxParams(
         image="adamcohenhillel/kortix-suna:0.0.20",
         public=True,
@@ -105,22 +117,21 @@ def create_sandbox(password: str, project_id: str = None):
             "CHROME_USER_DATA": "",
             "CHROME_DEBUGGING_PORT": "9222",
             "CHROME_DEBUGGING_HOST": "localhost",
-            "CHROME_CDP": ""
+            "CHROME_CDP": "",
         },
         resources={
             "cpu": 2,
             "memory": 4,
             "disk": 5,
-        }
+        },
     )
-    
+
     # Create the sandbox
     sandbox = daytona.create(params)
     logger.debug(f"Sandbox created with ID: {sandbox.id}")
-    
+
     # Start supervisord in a session for new sandbox
     start_supervisord_session(sandbox)
-    
+
     logger.debug(f"Sandbox environment successfully initialized")
     return sandbox
-

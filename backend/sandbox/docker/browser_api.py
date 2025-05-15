@@ -20,44 +20,57 @@ import io
 # Action model definitions
 #######################################################
 
+
 class Position(BaseModel):
     x: int
     y: int
 
+
 class ClickElementAction(BaseModel):
     index: int
+
 
 class ClickCoordinatesAction(BaseModel):
     x: int
     y: int
 
+
 class GoToUrlAction(BaseModel):
     url: str
+
 
 class InputTextAction(BaseModel):
     index: int
     text: str
 
+
 class ScrollAction(BaseModel):
     amount: Optional[int] = None
+
 
 class SendKeysAction(BaseModel):
     keys: str
 
+
 class SearchGoogleAction(BaseModel):
     query: str
+
 
 class SwitchTabAction(BaseModel):
     page_id: int
 
+
 class OpenTabAction(BaseModel):
     url: str
+
 
 class CloseTabAction(BaseModel):
     page_id: int
 
+
 class NoParamsAction(BaseModel):
     pass
+
 
 class DragDropAction(BaseModel):
     element_source: Optional[str] = None
@@ -71,13 +84,16 @@ class DragDropAction(BaseModel):
     steps: Optional[int] = 10
     delay_ms: Optional[int] = 5
 
+
 class DoneAction(BaseModel):
     success: bool = True
     text: str = ""
 
+
 #######################################################
 # DOM Structure Models
 #######################################################
+
 
 @dataclass
 class CoordinateSet:
@@ -86,12 +102,14 @@ class CoordinateSet:
     width: int = 0
     height: int = 0
 
+
 @dataclass
 class ViewportInfo:
     width: int = 0
     height: int = 0
     scroll_x: int = 0
     scroll_y: int = 0
+
 
 @dataclass
 class HashedDomElement:
@@ -100,16 +118,18 @@ class HashedDomElement:
     is_visible: bool
     page_coordinates: Optional[CoordinateSet] = None
 
+
 @dataclass
 class DOMBaseNode:
     is_visible: bool
-    parent: Optional['DOMElementNode'] = None
+    parent: Optional["DOMElementNode"] = None
+
 
 @dataclass
 class DOMTextNode(DOMBaseNode):
     text: str = field(default="")
-    type: str = 'TEXT_NODE'
-    
+    type: str = "TEXT_NODE"
+
     def has_parent_with_highlight_index(self) -> bool:
         current = self.parent
         while current is not None:
@@ -118,13 +138,14 @@ class DOMTextNode(DOMBaseNode):
             current = current.parent
         return False
 
+
 @dataclass
 class DOMElementNode(DOMBaseNode):
     tag_name: str = field(default="")
     xpath: str = field(default="")
     attributes: Dict[str, str] = field(default_factory=dict)
-    children: List['DOMBaseNode'] = field(default_factory=list)
-    
+    children: List["DOMBaseNode"] = field(default_factory=list)
+
     is_interactive: bool = False
     is_top_element: bool = False
     is_in_viewport: bool = False
@@ -133,65 +154,65 @@ class DOMElementNode(DOMBaseNode):
     viewport_coordinates: Optional[CoordinateSet] = None
     page_coordinates: Optional[CoordinateSet] = None
     viewport_info: Optional[ViewportInfo] = None
-    
+
     def __repr__(self) -> str:
-        tag_str = f'<{self.tag_name}'
+        tag_str = f"<{self.tag_name}"
         for key, value in self.attributes.items():
             tag_str += f' {key}="{value}"'
-        tag_str += '>'
-        
+        tag_str += ">"
+
         extras = []
         if self.is_interactive:
-            extras.append('interactive')
+            extras.append("interactive")
         if self.is_top_element:
-            extras.append('top')
+            extras.append("top")
         if self.highlight_index is not None:
-            extras.append(f'highlight:{self.highlight_index}')
-        
+            extras.append(f"highlight:{self.highlight_index}")
+
         if extras:
             tag_str += f' [{", ".join(extras)}]'
-            
+
         return tag_str
-    
+
     @cached_property
     def hash(self) -> HashedDomElement:
         return HashedDomElement(
             tag_name=self.tag_name,
             attributes=self.attributes,
             is_visible=self.is_visible,
-            page_coordinates=self.page_coordinates
+            page_coordinates=self.page_coordinates,
         )
-    
+
     def get_all_text_till_next_clickable_element(self, max_depth: int = -1) -> str:
         text_parts = []
-        
+
         def collect_text(node: DOMBaseNode, current_depth: int) -> None:
             if max_depth != -1 and current_depth > max_depth:
                 return
-                
+
             if isinstance(node, DOMElementNode) and node != self and node.highlight_index is not None:
                 return
-                
+
             if isinstance(node, DOMTextNode):
                 text_parts.append(node.text)
             elif isinstance(node, DOMElementNode):
                 for child in node.children:
                     collect_text(child, current_depth + 1)
-                    
+
         collect_text(self, 0)
-        return '\n'.join(text_parts).strip()
-    
+        return "\n".join(text_parts).strip()
+
     def clickable_elements_to_string(self, include_attributes: list[str] | None = None) -> str:
         """Convert the processed DOM content to HTML."""
         formatted_text = []
-        
+
         def process_node(node: DOMBaseNode, depth: int) -> None:
             if isinstance(node, DOMElementNode):
                 # Add element with highlight_index
                 if node.highlight_index is not None:
-                    attributes_str = ''
+                    attributes_str = ""
                     text = node.get_all_text_till_next_clickable_element()
-                    
+
                     # Process attributes for display
                     display_attributes = []
                     if include_attributes:
@@ -200,42 +221,43 @@ class DOMElementNode(DOMBaseNode):
                                 if text and value in text:
                                     continue  # Skip if attribute value is already in the text
                                 display_attributes.append(str(value))
-                    
-                    attributes_str = ';'.join(display_attributes)
-                    
+
+                    attributes_str = ";".join(display_attributes)
+
                     # Build the element string
-                    line = f'[{node.highlight_index}]<{node.tag_name}'
-                    
+                    line = f"[{node.highlight_index}]<{node.tag_name}"
+
                     # Add important attributes for identification
-                    for attr_name in ['id', 'href', 'name', 'value', 'type']:
+                    for attr_name in ["id", "href", "name", "value", "type"]:
                         if attr_name in node.attributes and node.attributes[attr_name]:
                             line += f' {attr_name}="{node.attributes[attr_name]}"'
-                    
+
                     # Add the text content if available
                     if text:
-                        line += f'> {text}'
+                        line += f"> {text}"
                     elif attributes_str:
-                        line += f'> {attributes_str}'
+                        line += f"> {attributes_str}"
                     else:
                         # If no text and no attributes, use the tag name
-                        line += f'> {node.tag_name.upper()}'
-                    
-                    line += ' </>'
+                        line += f"> {node.tag_name.upper()}"
+
+                    line += " </>"
                     formatted_text.append(line)
-                
+
                 # Process children regardless
                 for child in node.children:
                     process_node(child, depth + 1)
-                    
+
             elif isinstance(node, DOMTextNode):
                 # Add text only if it doesn't have a highlighted parent
                 if not node.has_parent_with_highlight_index() and node.is_visible:
                     if node.text and node.text.strip():
                         formatted_text.append(node.text)
-                    
+
         process_node(self, 0)
-        result = '\n'.join(formatted_text)
+        result = "\n".join(formatted_text)
         return result if result.strip() else "No interactive elements found"
+
 
 @dataclass
 class DOMState:
@@ -246,15 +268,17 @@ class DOMState:
     pixels_above: int = 0
     pixels_below: int = 0
 
+
 #######################################################
 # Browser Action Result Model
 #######################################################
+
 
 class BrowserActionResult(BaseModel):
     success: bool = True
     message: str = ""
     error: str = ""
-    
+
     # Extended state information
     url: Optional[str] = None
     title: Optional[str] = None
@@ -264,19 +288,21 @@ class BrowserActionResult(BaseModel):
     pixels_below: int = 0
     content: Optional[str] = None
     ocr_text: Optional[str] = None  # Added field for OCR text
-    
+
     # Additional metadata
     element_count: int = 0  # Number of interactive elements found
     interactive_elements: Optional[List[Dict[str, Any]]] = None  # Simplified list of interactive elements
     viewport_width: Optional[int] = None
     viewport_height: Optional[int] = None
-    
+
     class Config:
         arbitrary_types_allowed = True
 
+
 #######################################################
-# Browser Automation Implementation 
+# Browser Automation Implementation
 #######################################################
+
 
 class BrowserAutomation:
     def __init__(self):
@@ -285,44 +311,55 @@ class BrowserAutomation:
         self.pages: List[Page] = []
         self.current_page_index: int = 0
         self.logger = logging.getLogger("browser_automation")
-        self.include_attributes = ["id", "href", "src", "alt", "aria-label", "placeholder", "name", "role", "title", "value"]
+        self.include_attributes = [
+            "id",
+            "href",
+            "src",
+            "alt",
+            "aria-label",
+            "placeholder",
+            "name",
+            "role",
+            "title",
+            "value",
+        ]
         self.screenshot_dir = os.path.join(os.getcwd(), "screenshots")
         os.makedirs(self.screenshot_dir, exist_ok=True)
-        
+
         # Register routes
         self.router.on_startup.append(self.startup)
         self.router.on_shutdown.append(self.shutdown)
-        
+
         # Basic navigation
         self.router.post("/automation/navigate_to")(self.navigate_to)
         self.router.post("/automation/search_google")(self.search_google)
         self.router.post("/automation/go_back")(self.go_back)
         self.router.post("/automation/wait")(self.wait)
-        
+
         # Element interaction
         self.router.post("/automation/click_element")(self.click_element)
         self.router.post("/automation/click_coordinates")(self.click_coordinates)
         self.router.post("/automation/input_text")(self.input_text)
         self.router.post("/automation/send_keys")(self.send_keys)
-        
+
         # Tab management
         self.router.post("/automation/switch_tab")(self.switch_tab)
         self.router.post("/automation/open_tab")(self.open_tab)
         self.router.post("/automation/close_tab")(self.close_tab)
-        
+
         # Content actions
         self.router.post("/automation/extract_content")(self.extract_content)
         self.router.post("/automation/save_pdf")(self.save_pdf)
-        
+
         # Scroll actions
         self.router.post("/automation/scroll_down")(self.scroll_down)
         self.router.post("/automation/scroll_up")(self.scroll_up)
         self.router.post("/automation/scroll_to_text")(self.scroll_to_text)
-        
+
         # Dropdown actions
         self.router.post("/automation/get_dropdown_options")(self.get_dropdown_options)
         self.router.post("/automation/select_dropdown_option")(self.select_dropdown_option)
-        
+
         # Drag and drop
         self.router.post("/automation/drag_drop")(self.drag_drop)
 
@@ -332,13 +369,10 @@ class BrowserAutomation:
             print("Starting browser initialization...")
             playwright = await async_playwright().start()
             print("Playwright started, launching browser...")
-            
+
             # Use non-headless mode for testing with slower timeouts
-            launch_options = {
-                "headless": False,
-                "timeout": 60000
-            }
-            
+            launch_options = {"headless": False, "timeout": 60000}
+
             try:
                 self.browser = await playwright.chromium.launch(**launch_options)
                 print("Browser launched successfully")
@@ -363,31 +397,31 @@ class BrowserAutomation:
                 # Navigate to about:blank to ensure page is ready
                 # await page.goto("google.com", timeout=30000)
                 print("Navigated to google.com")
-                
+
                 print("Browser initialization completed successfully")
         except Exception as e:
             print(f"Browser startup error: {str(e)}")
             traceback.print_exc()
             raise RuntimeError(f"Browser initialization failed: {str(e)}")
-            
+
     async def shutdown(self):
         """Clean up browser instance on shutdown"""
         if self.browser:
             await self.browser.close()
-    
+
     async def get_current_page(self) -> Page:
         """Get the current active page"""
         if not self.pages:
             raise HTTPException(status_code=500, detail="No browser pages available")
         return self.pages[self.current_page_index]
-    
+
     async def get_selector_map(self) -> Dict[int, DOMElementNode]:
         """Get a map of selectable elements on the page"""
         page = await self.get_current_page()
-        
+
         # Create a selector map for interactive elements
         selector_map = {}
-        
+
         try:
             # More comprehensive JavaScript to find interactive elements
             elements_js = """
@@ -449,64 +483,64 @@ class BrowserAutomation:
                 });
             })();
             """
-            
+
             elements = await page.evaluate(elements_js)
             print(f"Found {len(elements)} interactive elements in selector map")
-            
+
             # Create a root element for the tree
             root = DOMElementNode(
                 is_visible=True,
                 tag_name="body",
                 is_interactive=False,
-                is_top_element=True
+                is_top_element=True,
             )
-            
+
             # Create element nodes for each element
             for idx, el in enumerate(elements):
                 # Create coordinate sets
                 page_coordinates = None
                 viewport_coordinates = None
-                
-                if 'pageCoordinates' in el:
-                    coords = el['pageCoordinates']
+
+                if "pageCoordinates" in el:
+                    coords = el["pageCoordinates"]
                     page_coordinates = CoordinateSet(
-                        x=coords.get('x', 0),
-                        y=coords.get('y', 0),
-                        width=coords.get('width', 0),
-                        height=coords.get('height', 0)
+                        x=coords.get("x", 0),
+                        y=coords.get("y", 0),
+                        width=coords.get("width", 0),
+                        height=coords.get("height", 0),
                     )
-                
-                if 'viewportCoordinates' in el:
-                    coords = el['viewportCoordinates']
+
+                if "viewportCoordinates" in el:
+                    coords = el["viewportCoordinates"]
                     viewport_coordinates = CoordinateSet(
-                        x=coords.get('x', 0),
-                        y=coords.get('y', 0),
-                        width=coords.get('width', 0),
-                        height=coords.get('height', 0)
+                        x=coords.get("x", 0),
+                        y=coords.get("y", 0),
+                        width=coords.get("width", 0),
+                        height=coords.get("height", 0),
                     )
-                
+
                 # Create the element node
                 element_node = DOMElementNode(
-                    is_visible=el.get('isVisible', True),
-                    tag_name=el.get('tagName', 'div'),
-                    attributes=el.get('attributes', {}),
-                    is_interactive=el.get('isInteractive', True),
-                    is_in_viewport=el.get('isInViewport', False),
-                    highlight_index=el.get('index', idx + 1),
+                    is_visible=el.get("isVisible", True),
+                    tag_name=el.get("tagName", "div"),
+                    attributes=el.get("attributes", {}),
+                    is_interactive=el.get("isInteractive", True),
+                    is_in_viewport=el.get("isInViewport", False),
+                    highlight_index=el.get("index", idx + 1),
                     page_coordinates=page_coordinates,
-                    viewport_coordinates=viewport_coordinates
+                    viewport_coordinates=viewport_coordinates,
                 )
-                
+
                 # Add a text node if there's text content
-                if el.get('text'):
-                    text_node = DOMTextNode(is_visible=True, text=el.get('text', ''))
+                if el.get("text"):
+                    text_node = DOMTextNode(is_visible=True, text=el.get("text", ""))
                     text_node.parent = element_node
                     element_node.children.append(text_node)
-                
-                selector_map[el.get('index', idx + 1)] = element_node
+
+                selector_map[el.get("index", idx + 1)] = element_node
                 root.children.append(element_node)
                 element_node.parent = root
-                
+
         except Exception as e:
             print(f"Error getting selector map: {e}")
             traceback.print_exc()
@@ -514,47 +548,48 @@ class BrowserAutomation:
             dummy = DOMElementNode(
                 is_visible=True,
                 tag_name="a",
-                attributes={'href': '#'},
+                attributes={"href": "#"},
                 is_interactive=True,
-                highlight_index=1
+                highlight_index=1,
             )
             dummy_text = DOMTextNode(is_visible=True, text="Dummy Element")
             dummy_text.parent = dummy
             dummy.children.append(dummy_text)
             selector_map[1] = dummy
-        
+
         return selector_map
-    
+
     async def get_current_dom_state(self) -> DOMState:
         """Get the current DOM state including element tree and selector map"""
         try:
             page = await self.get_current_page()
             selector_map = await self.get_selector_map()
-            
+
             # Create a root element
             root = DOMElementNode(
                 is_visible=True,
                 tag_name="body",
                 is_interactive=False,
-                is_top_element=True
+                is_top_element=True,
             )
-            
+
             # Add all elements from selector map as children of root
             for element in selector_map.values():
                 if element.parent is None:
                     element.parent = root
                     root.children.append(element)
-            
+
             # Get basic page info
             url = page.url
             try:
                 title = await page.title()
             except:
                 title = "Unknown Title"
-            
+
             # Get more accurate scroll information - fix JavaScript syntax
             try:
-                scroll_info = await page.evaluate("""
+                scroll_info = await page.evaluate(
+                    """
                 () => {
                     const body = document.body;
                     const html = document.documentElement;
@@ -572,21 +607,22 @@ class BrowserAutomation:
                         viewportHeight: windowHeight
                     };
                 }
-                """)
-                pixels_above = scroll_info.get('pixelsAbove', 0)
-                pixels_below = scroll_info.get('pixelsBelow', 0)
+                """
+                )
+                pixels_above = scroll_info.get("pixelsAbove", 0)
+                pixels_below = scroll_info.get("pixelsBelow", 0)
             except Exception as e:
                 print(f"Error getting scroll info: {e}")
                 pixels_above = 0
                 pixels_below = 0
-            
+
             return DOMState(
                 element_tree=root,
                 selector_map=selector_map,
                 url=url,
                 title=title,
                 pixels_above=pixels_above,
-                pixels_below=pixels_below
+                pixels_below=pixels_below,
             )
         except Exception as e:
             print(f"Error getting DOM state: {e}")
@@ -596,66 +632,66 @@ class BrowserAutomation:
                 is_visible=True,
                 tag_name="body",
                 is_interactive=False,
-                is_top_element=True
+                is_top_element=True,
             )
             dummy_map = {1: dummy_root}
             return DOMState(
                 element_tree=dummy_root,
                 selector_map=dummy_map,
-                url=page.url if 'page' in locals() else "about:blank",
+                url=page.url if "page" in locals() else "about:blank",
                 title="Error page",
                 pixels_above=0,
-                pixels_below=0
+                pixels_below=0,
             )
-    
+
     async def take_screenshot(self) -> str:
         """Take a screenshot and return as base64 encoded string"""
         try:
             page = await self.get_current_page()
-            screenshot_bytes = await page.screenshot(type='jpeg', quality=60, full_page=False)
-            return base64.b64encode(screenshot_bytes).decode('utf-8')
+            screenshot_bytes = await page.screenshot(type="jpeg", quality=60, full_page=False)
+            return base64.b64encode(screenshot_bytes).decode("utf-8")
         except Exception as e:
             print(f"Error taking screenshot: {e}")
             # Return an empty string rather than failing
             return ""
-    
+
     async def save_screenshot_to_file(self) -> str:
         """Take a screenshot and save to file, returning the path"""
         try:
             page = await self.get_current_page()
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             random_id = random.randint(1000, 9999)
             filename = f"screenshot_{timestamp}_{random_id}.jpg"
             filepath = os.path.join(self.screenshot_dir, filename)
-            
-            await page.screenshot(path=filepath, type='jpeg', quality=60, full_page=False)
+
+            await page.screenshot(path=filepath, type="jpeg", quality=60, full_page=False)
             return filepath
         except Exception as e:
             print(f"Error saving screenshot: {e}")
             return ""
-    
+
     async def extract_ocr_text_from_screenshot(self, screenshot_base64: str) -> str:
         """Extract text from screenshot using OCR"""
         if not screenshot_base64:
             return ""
-            
+
         try:
             # Decode base64 to image
             image_bytes = base64.b64decode(screenshot_base64)
             image = Image.open(io.BytesIO(image_bytes))
-            
+
             # Extract text using pytesseract
             ocr_text = pytesseract.image_to_string(image)
-            
+
             # Clean up the text
             ocr_text = ocr_text.strip()
-            
+
             return ocr_text
         except Exception as e:
             print(f"Error performing OCR: {e}")
             traceback.print_exc()
             return ""
-    
+
     async def get_updated_browser_state(self, action_name: str) -> tuple:
         """Helper method to get updated browser state after any action
         Returns a tuple of (dom_state, screenshot, elements, metadata)
@@ -663,65 +699,75 @@ class BrowserAutomation:
         try:
             # Wait a moment for any potential async processes to settle
             await asyncio.sleep(0.5)
-            
+
             # Get updated state
             dom_state = await self.get_current_dom_state()
             screenshot = await self.take_screenshot()
-            
+
             # Format elements for output
-            elements = dom_state.element_tree.clickable_elements_to_string(
-                include_attributes=self.include_attributes
-            )
-            
+            elements = dom_state.element_tree.clickable_elements_to_string(include_attributes=self.include_attributes)
+
             # Collect additional metadata
             page = await self.get_current_page()
             metadata = {}
-            
+
             # Get element count
-            metadata['element_count'] = len(dom_state.selector_map)
-            
+            metadata["element_count"] = len(dom_state.selector_map)
+
             # Create simplified interactive elements list
             interactive_elements = []
             for idx, element in dom_state.selector_map.items():
                 element_info = {
-                    'index': idx,
-                    'tag_name': element.tag_name,
-                    'text': element.get_all_text_till_next_clickable_element(),
-                    'is_in_viewport': element.is_in_viewport
+                    "index": idx,
+                    "tag_name": element.tag_name,
+                    "text": element.get_all_text_till_next_clickable_element(),
+                    "is_in_viewport": element.is_in_viewport,
                 }
-                
+
                 # Add key attributes
-                for attr_name in ['id', 'href', 'src', 'alt', 'placeholder', 'name', 'role', 'title', 'type']:
+                for attr_name in [
+                    "id",
+                    "href",
+                    "src",
+                    "alt",
+                    "placeholder",
+                    "name",
+                    "role",
+                    "title",
+                    "type",
+                ]:
                     if attr_name in element.attributes:
                         element_info[attr_name] = element.attributes[attr_name]
-                
+
                 interactive_elements.append(element_info)
-            
-            metadata['interactive_elements'] = interactive_elements
-            
+
+            metadata["interactive_elements"] = interactive_elements
+
             # Get viewport dimensions - Fix syntax error in JavaScript
             try:
-                viewport = await page.evaluate("""
+                viewport = await page.evaluate(
+                    """
                 () => {
                     return {
                         width: window.innerWidth,
                         height: window.innerHeight
                     };
                 }
-                """)
-                metadata['viewport_width'] = viewport.get('width', 0)
-                metadata['viewport_height'] = viewport.get('height', 0)
+                """
+                )
+                metadata["viewport_width"] = viewport.get("width", 0)
+                metadata["viewport_height"] = viewport.get("height", 0)
             except Exception as e:
                 print(f"Error getting viewport dimensions: {e}")
-                metadata['viewport_width'] = 0
-                metadata['viewport_height'] = 0
-            
+                metadata["viewport_width"] = 0
+                metadata["viewport_height"] = 0
+
             # Extract OCR text from screenshot if available
             ocr_text = ""
             if screenshot:
                 ocr_text = await self.extract_ocr_text_from_screenshot(screenshot)
-                metadata['ocr_text'] = ocr_text
-            
+                metadata["ocr_text"] = ocr_text
+
             print(f"Got updated state after {action_name}: {len(dom_state.selector_map)} elements")
             return dom_state, screenshot, elements, metadata
         except Exception as e:
@@ -730,14 +776,23 @@ class BrowserAutomation:
             # Return empty values in case of error
             return None, "", "", {}
 
-    def build_action_result(self, success: bool, message: str, dom_state, screenshot: str, 
-                              elements: str, metadata: dict, error: str = "", content: str = None,
-                              fallback_url: str = None) -> BrowserActionResult:
+    def build_action_result(
+        self,
+        success: bool,
+        message: str,
+        dom_state,
+        screenshot: str,
+        elements: str,
+        metadata: dict,
+        error: str = "",
+        content: str = None,
+        fallback_url: str = None,
+    ) -> BrowserActionResult:
         """Helper method to build a consistent BrowserActionResult"""
         # Ensure elements is never None to avoid display issues
         if elements is None:
             elements = ""
-            
+
         return BrowserActionResult(
             success=success,
             message=message,
@@ -749,25 +804,27 @@ class BrowserAutomation:
             pixels_above=dom_state.pixels_above if dom_state else 0,
             pixels_below=dom_state.pixels_below if dom_state else 0,
             content=content,
-            ocr_text=metadata.get('ocr_text', ""),
-            element_count=metadata.get('element_count', 0),
-            interactive_elements=metadata.get('interactive_elements', []),
-            viewport_width=metadata.get('viewport_width', 0),
-            viewport_height=metadata.get('viewport_height', 0)
+            ocr_text=metadata.get("ocr_text", ""),
+            element_count=metadata.get("element_count", 0),
+            interactive_elements=metadata.get("interactive_elements", []),
+            viewport_width=metadata.get("viewport_width", 0),
+            viewport_height=metadata.get("viewport_height", 0),
         )
 
     # Basic Navigation Actions
-    
+
     async def navigate_to(self, action: GoToUrlAction = Body(...)):
         """Navigate to a specified URL"""
         try:
             page = await self.get_current_page()
             await page.goto(action.url, wait_until="domcontentloaded")
             await page.wait_for_load_state("networkidle", timeout=10000)
-            
+
             # Get updated state after action
-            dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(f"navigate_to({action.url})")
-            
+            dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(
+                f"navigate_to({action.url})"
+            )
+
             result = self.build_action_result(
                 True,
                 f"Navigated to {action.url}",
@@ -776,9 +833,9 @@ class BrowserAutomation:
                 elements,
                 metadata,
                 error="",
-                content=None
+                content=None,
             )
-            
+
             print(f"Navigation result: success={result.success}, url={result.url}")
             return result
         except Exception as e:
@@ -786,7 +843,9 @@ class BrowserAutomation:
             traceback.print_exc()
             # Try to get some state info even after error
             try:
-                dom_state, screenshot, elements, metadata = await self.get_updated_browser_state("navigate_error_recovery")
+                dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(
+                    "navigate_error_recovery"
+                )
                 return self.build_action_result(
                     False,
                     str(e),
@@ -795,20 +854,11 @@ class BrowserAutomation:
                     elements,
                     metadata,
                     error=str(e),
-                    content=None
+                    content=None,
                 )
             except:
-                return self.build_action_result(
-                    False,
-                    str(e),
-                    None,
-                    "",
-                    "",
-                    {},
-                    error=str(e),
-                    content=None
-                )
-    
+                return self.build_action_result(False, str(e), None, "", "", {}, error=str(e), content=None)
+
     async def search_google(self, action: SearchGoogleAction = Body(...)):
         """Search Google with the provided query"""
         try:
@@ -816,10 +866,12 @@ class BrowserAutomation:
             search_url = f"https://www.google.com/search?q={action.query}"
             await page.goto(search_url)
             await page.wait_for_load_state()
-            
+
             # Get updated state after action
-            dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(f"search_google({action.query})")
-            
+            dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(
+                f"search_google({action.query})"
+            )
+
             return self.build_action_result(
                 True,
                 f"Searched for '{action.query}' in Google",
@@ -828,14 +880,16 @@ class BrowserAutomation:
                 elements,
                 metadata,
                 error="",
-                content=None
+                content=None,
             )
         except Exception as e:
             print(f"Search error: {str(e)}")
             traceback.print_exc()
             # Try to get some state info even after error
             try:
-                dom_state, screenshot, elements, metadata = await self.get_updated_browser_state("search_error_recovery")
+                dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(
+                    "search_error_recovery"
+                )
                 return self.build_action_result(
                     False,
                     str(e),
@@ -844,30 +898,21 @@ class BrowserAutomation:
                     elements,
                     metadata,
                     error=str(e),
-                    content=None
+                    content=None,
                 )
             except:
-                return self.build_action_result(
-                    False,
-                    str(e),
-                    None,
-                    "",
-                    "",
-                    {},
-                    error=str(e),
-                    content=None
-                )
-    
+                return self.build_action_result(False, str(e), None, "", "", {}, error=str(e), content=None)
+
     async def go_back(self, _: NoParamsAction = Body(...)):
         """Navigate back in browser history"""
         try:
             page = await self.get_current_page()
             await page.go_back()
             await page.wait_for_load_state()
-            
+
             # Get updated state after action
             dom_state, screenshot, elements, metadata = await self.get_updated_browser_state("go_back")
-            
+
             return self.build_action_result(
                 True,
                 "Navigated back",
@@ -876,28 +921,19 @@ class BrowserAutomation:
                 elements,
                 metadata,
                 error="",
-                content=None
+                content=None,
             )
         except Exception as e:
-            return self.build_action_result(
-                False,
-                str(e),
-                None,
-                "",
-                "",
-                {},
-                error=str(e),
-                content=None
-            )
-    
+            return self.build_action_result(False, str(e), None, "", "", {}, error=str(e), content=None)
+
     async def wait(self, seconds: int = Body(3)):
         """Wait for the specified number of seconds"""
         try:
             await asyncio.sleep(seconds)
-            
+
             # Get updated state after waiting
             dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(f"wait({seconds} seconds)")
-            
+
             return self.build_action_result(
                 True,
                 f"Waited for {seconds} seconds",
@@ -906,36 +942,29 @@ class BrowserAutomation:
                 elements,
                 metadata,
                 error="",
-                content=None
+                content=None,
             )
         except Exception as e:
-            return self.build_action_result(
-                False,
-                str(e),
-                None,
-                "",
-                "",
-                {},
-                error=str(e),
-                content=None
-            )
-    
+            return self.build_action_result(False, str(e), None, "", "", {}, error=str(e), content=None)
+
     # Element Interaction Actions
-    
+
     async def click_coordinates(self, action: ClickCoordinatesAction = Body(...)):
         """Click at specific x,y coordinates on the page"""
         try:
             page = await self.get_current_page()
-            
+
             # Perform the click at the specified coordinates
             await page.mouse.click(action.x, action.y)
-            
+
             # Give time for any navigation or DOM updates to occur
             await page.wait_for_load_state("networkidle", timeout=5000)
-            
+
             # Get updated state after action
-            dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(f"click_coordinates({action.x}, {action.y})")
-            
+            dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(
+                f"click_coordinates({action.x}, {action.y})"
+            )
+
             return self.build_action_result(
                 True,
                 f"Clicked at coordinates ({action.x}, {action.y})",
@@ -944,15 +973,17 @@ class BrowserAutomation:
                 elements,
                 metadata,
                 error="",
-                content=None
+                content=None,
             )
         except Exception as e:
             print(f"Error in click_coordinates: {e}")
             traceback.print_exc()
-            
+
             # Try to get state even after error
             try:
-                dom_state, screenshot, elements, metadata = await self.get_updated_browser_state("click_coordinates_error_recovery")
+                dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(
+                    "click_coordinates_error_recovery"
+                )
                 return self.build_action_result(
                     False,
                     str(e),
@@ -961,40 +992,33 @@ class BrowserAutomation:
                     elements,
                     metadata,
                     error=str(e),
-                    content=None
+                    content=None,
                 )
             except:
-                return self.build_action_result(
-                    False,
-                    str(e),
-                    None,
-                    "",
-                    "",
-                    {},
-                    error=str(e),
-                    content=None
-                )
-    
+                return self.build_action_result(False, str(e), None, "", "", {}, error=str(e), content=None)
+
     async def click_element(self, action: ClickElementAction = Body(...)):
         """Click on an element by index"""
         try:
             page = await self.get_current_page()
-            
+
             # Get the current state and selector map *before* the click
             initial_dom_state = await self.get_current_dom_state()
             selector_map = initial_dom_state.selector_map
-            
+
             if action.index not in selector_map:
                 # Get updated state even if element not found initially
-                dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(f"click_element_error (index {action.index} not found)")
+                dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(
+                    f"click_element_error (index {action.index} not found)"
+                )
                 return self.build_action_result(
                     False,
                     f"Element with index {action.index} not found",
-                    dom_state, # Use the latest state
+                    dom_state,  # Use the latest state
                     screenshot,
                     elements,
                     metadata,
-                    error=f"Element with index {action.index} not found"
+                    error=f"Element with index {action.index} not found",
                 )
 
             element_to_click = selector_map[action.index]
@@ -1021,9 +1045,9 @@ class BrowserAutomation:
                 return null; // Element not found at the expected index
             }
             """
-            
-            element_info = {'index': action.index} # Pass the target index to the script
-            
+
+            element_info = {"index": action.index}  # Pass the target index to the script
+
             target_element_handle = await page.evaluate_handle(js_selector_script, element_info)
 
             click_success = False
@@ -1033,7 +1057,7 @@ class BrowserAutomation:
                 try:
                     # Use Playwright's recommended way: click the handle
                     # Add timeout and wait for element to be stable
-                    await target_element_handle.click(timeout=5000) 
+                    await target_element_handle.click(timeout=5000)
                     click_success = True
                     print(f"Successfully clicked element handle for index {action.index}")
                 except Exception as click_error:
@@ -1042,37 +1066,44 @@ class BrowserAutomation:
                     # Optional: Add fallback methods here if needed
                     # e.g., target_element_handle.dispatch_event('click')
             else:
-                 error_message = f"Could not locate the target element handle for index {action.index} using JS script."
-                 print(error_message)
-
+                error_message = f"Could not locate the target element handle for index {action.index} using JS script."
+                print(error_message)
 
             # Wait for potential page changes/network activity
             try:
                 await page.wait_for_load_state("networkidle", timeout=5000)
             except Exception as wait_error:
                 print(f"Timeout or error waiting for network idle after click: {wait_error}")
-                await asyncio.sleep(1) # Fallback wait
+                await asyncio.sleep(1)  # Fallback wait
 
             # Get updated state after action
-            dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(f"click_element({action.index})")
+            dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(
+                f"click_element({action.index})"
+            )
 
             return self.build_action_result(
                 click_success,
-                f"Clicked element with index {action.index}" if click_success else f"Attempted to click element {action.index} but failed. Error: {error_message}",
+                (
+                    f"Clicked element with index {action.index}"
+                    if click_success
+                    else f"Attempted to click element {action.index} but failed. Error: {error_message}"
+                ),
                 dom_state,
                 screenshot,
                 elements,
                 metadata,
                 error=error_message if not click_success else "",
-                content=None
+                content=None,
             )
-            
+
         except Exception as e:
             print(f"Error in click_element: {e}")
             traceback.print_exc()
             # Try to get state even after error
             try:
-                dom_state, screenshot, elements, metadata = await self.get_updated_browser_state("click_element_error_recovery")
+                dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(
+                    "click_element_error_recovery"
+                )
                 return self.build_action_result(
                     False,
                     str(e),
@@ -1081,33 +1112,33 @@ class BrowserAutomation:
                     elements,
                     metadata,
                     error=str(e),
-                    content=None
+                    content=None,
                 )
             except:
                 # Fallback if getting state also fails
                 current_url = "unknown"
                 try:
-                   current_url = page.url # Try to get at least the URL
+                    current_url = page.url  # Try to get at least the URL
                 except:
-                    pass 
+                    pass
                 return self.build_action_result(
                     False,
                     str(e),
-                    None, # No DOM state available
-                    "",   # No screenshot
-                    "",   # No elements string
-                    {},   # Empty metadata
+                    None,  # No DOM state available
+                    "",  # No screenshot
+                    "",  # No elements string
+                    {},  # Empty metadata
                     error=str(e),
                     content=None,
-                    fallback_url=current_url 
+                    fallback_url=current_url,
                 )
-    
+
     async def input_text(self, action: InputTextAction = Body(...)):
         """Input text into an element"""
         try:
             page = await self.get_current_page()
             selector_map = await self.get_selector_map()
-            
+
             if action.index not in selector_map:
                 return self.build_action_result(
                     False,
@@ -1116,16 +1147,16 @@ class BrowserAutomation:
                     "",
                     "",
                     {},
-                    error=f"Element with index {action.index} not found"
+                    error=f"Element with index {action.index} not found",
                 )
-            
+
             # In a real implementation, we would use the selector map to get the element's
             # properties and use them to find and type into the element
             element = selector_map[action.index]
-            
+
             # Use CSS selector or XPath to locate and type into the element
             await page.wait_for_timeout(500)  # Small delay before typing
-            
+
             # Demo implementation - would use proper selectors in production
             if element.attributes.get("id"):
                 await page.fill(f"#{element.attributes['id']}", action.text)
@@ -1135,10 +1166,12 @@ class BrowserAutomation:
             else:
                 # Fallback to xpath
                 await page.fill(f"//{element.tag_name}[{action.index}]", action.text)
-            
+
             # Get updated state after action
-            dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(f"input_text({action.index}, '{action.text}')")
-            
+            dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(
+                f"input_text({action.index}, '{action.text}')"
+            )
+
             return self.build_action_result(
                 True,
                 f"Input '{action.text}' into element with index {action.index}",
@@ -1147,29 +1180,22 @@ class BrowserAutomation:
                 elements,
                 metadata,
                 error="",
-                content=None
+                content=None,
             )
         except Exception as e:
-            return self.build_action_result(
-                False,
-                str(e),
-                None,
-                "",
-                "",
-                {},
-                error=str(e),
-                content=None
-            )
-    
+            return self.build_action_result(False, str(e), None, "", "", {}, error=str(e), content=None)
+
     async def send_keys(self, action: SendKeysAction = Body(...)):
         """Send keyboard keys"""
         try:
             page = await self.get_current_page()
             await page.keyboard.press(action.keys)
-            
+
             # Get updated state after action
-            dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(f"send_keys({action.keys})")
-            
+            dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(
+                f"send_keys({action.keys})"
+            )
+
             return self.build_action_result(
                 True,
                 f"Sent keys: {action.keys}",
@@ -1178,22 +1204,13 @@ class BrowserAutomation:
                 elements,
                 metadata,
                 error="",
-                content=None
+                content=None,
             )
         except Exception as e:
-            return self.build_action_result(
-                False,
-                str(e),
-                None,
-                "",
-                "",
-                {},
-                error=str(e),
-                content=None
-            )
-    
+            return self.build_action_result(False, str(e), None, "", "", {}, error=str(e), content=None)
+
     # Tab Management Actions
-    
+
     async def switch_tab(self, action: SwitchTabAction = Body(...)):
         """Switch to a different tab by index"""
         try:
@@ -1201,10 +1218,12 @@ class BrowserAutomation:
                 self.current_page_index = action.page_id
                 page = await self.get_current_page()
                 await page.wait_for_load_state()
-                
+
                 # Get updated state after action
-                dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(f"switch_tab({action.page_id})")
-                
+                dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(
+                    f"switch_tab({action.page_id})"
+                )
+
                 return self.build_action_result(
                     True,
                     f"Switched to tab {action.page_id}",
@@ -1213,7 +1232,7 @@ class BrowserAutomation:
                     elements,
                     metadata,
                     error="",
-                    content=None
+                    content=None,
                 )
             else:
                 return self.build_action_result(
@@ -1223,20 +1242,11 @@ class BrowserAutomation:
                     "",
                     "",
                     {},
-                    error=f"Tab {action.page_id} not found"
+                    error=f"Tab {action.page_id} not found",
                 )
         except Exception as e:
-            return self.build_action_result(
-                False,
-                str(e),
-                None,
-                "",
-                "",
-                {},
-                error=str(e),
-                content=None
-            )
-    
+            return self.build_action_result(False, str(e), None, "", "", {}, error=str(e), content=None)
+
     async def open_tab(self, action: OpenTabAction = Body(...)):
         """Open a new tab with the specified URL"""
         try:
@@ -1244,20 +1254,20 @@ class BrowserAutomation:
             # Create new page in same browser instance
             new_page = await self.browser.new_page()
             print(f"New page created successfully")
-            
+
             # Navigate to the URL
             await new_page.goto(action.url, wait_until="domcontentloaded")
             await new_page.wait_for_load_state("networkidle", timeout=10000)
             print(f"Navigated to URL in new tab: {action.url}")
-            
+
             # Add to page list and make it current
             self.pages.append(new_page)
             self.current_page_index = len(self.pages) - 1
             print(f"New tab added as index {self.current_page_index}")
-            
+
             # Get updated state after action
             dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(f"open_tab({action.url})")
-            
+
             return self.build_action_result(
                 True,
                 f"Opened new tab with URL: {action.url}",
@@ -1266,24 +1276,15 @@ class BrowserAutomation:
                 elements,
                 metadata,
                 error="",
-                content=None
+                content=None,
             )
         except Exception as e:
-            print("****"*10)
+            print("****" * 10)
             print(f"Error opening tab: {e}")
             print(traceback.format_exc())
-            print("****"*10)
-            return self.build_action_result(
-                False,
-                str(e),
-                None,
-                "",
-                "",
-                {},
-                error=str(e),
-                content=None
-            )
-    
+            print("****" * 10)
+            return self.build_action_result(False, str(e), None, "", "", {}, error=str(e), content=None)
+
     async def close_tab(self, action: CloseTabAction = Body(...)):
         """Close a tab by index"""
         try:
@@ -1292,17 +1293,19 @@ class BrowserAutomation:
                 url = page.url
                 await page.close()
                 self.pages.pop(action.page_id)
-                
+
                 # Adjust current index if needed
                 if self.current_page_index >= len(self.pages):
                     self.current_page_index = max(0, len(self.pages) - 1)
                 elif self.current_page_index >= action.page_id:
                     self.current_page_index = max(0, self.current_page_index - 1)
-                
+
                 # Get updated state after action
                 page = await self.get_current_page()
-                dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(f"close_tab({action.page_id})")
-                
+                dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(
+                    f"close_tab({action.page_id})"
+                )
+
                 return self.build_action_result(
                     True,
                     f"Closed tab {action.page_id} with URL: {url}",
@@ -1311,7 +1314,7 @@ class BrowserAutomation:
                     elements,
                     metadata,
                     error="",
-                    content=None
+                    content=None,
                 )
             else:
                 return self.build_action_result(
@@ -1321,31 +1324,23 @@ class BrowserAutomation:
                     "",
                     "",
                     {},
-                    error=f"Tab {action.page_id} not found"
+                    error=f"Tab {action.page_id} not found",
                 )
         except Exception as e:
-            return self.build_action_result(
-                False,
-                str(e),
-                None,
-                "",
-                "",
-                {},
-                error=str(e),
-                content=None
-            )
-    
+            return self.build_action_result(False, str(e), None, "", "", {}, error=str(e), content=None)
+
     # Content Actions
-    
+
     async def extract_content(self, goal: str = Body(...)):
         """Extract content from the current page based on the provided goal"""
         try:
             page = await self.get_current_page()
             content = await page.content()
-            
+
             # In a full implementation, we would use an LLM to extract specific content
             # based on the goal. For this example, we'll extract visible text.
-            extracted_text = await page.evaluate("""
+            extracted_text = await page.evaluate(
+                """
             Array.from(document.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, span, div'))
                 .filter(el => {
                     const style = window.getComputedStyle(el);
@@ -1357,11 +1352,12 @@ class BrowserAutomation:
                 })
                 .map(el => el.innerText.trim())
                 .join('\\n\\n');
-            """)
-            
+            """
+            )
+
             # Get updated state
             dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(f"extract_content({goal})")
-            
+
             return self.build_action_result(
                 True,
                 f"Content extracted based on goal: {goal}",
@@ -1370,34 +1366,25 @@ class BrowserAutomation:
                 elements,
                 metadata,
                 error="",
-                content=extracted_text
+                content=extracted_text,
             )
         except Exception as e:
-            return self.build_action_result(
-                False,
-                str(e),
-                None,
-                "",
-                "",
-                {},
-                error=str(e),
-                content=None
-            )
-    
+            return self.build_action_result(False, str(e), None, "", "", {}, error=str(e), content=None)
+
     async def save_pdf(self):
         """Save the current page as a PDF"""
         try:
             page = await self.get_current_page()
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             random_id = random.randint(1000, 9999)
             filename = f"page_{timestamp}_{random_id}.pdf"
             filepath = os.path.join(self.screenshot_dir, filename)
-            
+
             await page.pdf(path=filepath)
-            
+
             # Get updated state
             dom_state, screenshot, elements, metadata = await self.get_updated_browser_state("save_pdf")
-            
+
             return self.build_action_result(
                 True,
                 f"Saved page as PDF: {filepath}",
@@ -1406,20 +1393,11 @@ class BrowserAutomation:
                 elements,
                 metadata,
                 error="",
-                content=None
+                content=None,
             )
         except Exception as e:
-            return self.build_action_result(
-                False,
-                str(e),
-                None,
-                "",
-                "",
-                {},
-                error=str(e),
-                content=None
-            )
-    
+            return self.build_action_result(False, str(e), None, "", "", {}, error=str(e), content=None)
+
     # Scroll Actions
 
     async def scroll_down(self, action: ScrollAction = Body(...)):
@@ -1432,12 +1410,14 @@ class BrowserAutomation:
             else:
                 await page.evaluate("window.scrollBy(0, window.innerHeight);")
                 amount_str = "one page"
-            
+
             await page.wait_for_timeout(500)  # Wait for scroll to complete
-            
+
             # Get updated state after action
-            dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(f"scroll_down({amount_str})")
-            
+            dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(
+                f"scroll_down({amount_str})"
+            )
+
             return self.build_action_result(
                 True,
                 f"Scrolled down by {amount_str}",
@@ -1446,20 +1426,11 @@ class BrowserAutomation:
                 elements,
                 metadata,
                 error="",
-                content=None
+                content=None,
             )
         except Exception as e:
-            return self.build_action_result(
-                False,
-                str(e),
-                None,
-                "",
-                "",
-                {},
-                error=str(e),
-                content=None
-            )
-    
+            return self.build_action_result(False, str(e), None, "", "", {}, error=str(e), content=None)
+
     async def scroll_up(self, action: ScrollAction = Body(...)):
         """Scroll up the page"""
         try:
@@ -1470,12 +1441,12 @@ class BrowserAutomation:
             else:
                 await page.evaluate("window.scrollBy(0, -window.innerHeight);")
                 amount_str = "one page"
-            
+
             await page.wait_for_timeout(500)  # Wait for scroll to complete
-            
+
             # Get updated state after action
             dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(f"scroll_up({amount_str})")
-            
+
             return self.build_action_result(
                 True,
                 f"Scrolled up by {amount_str}",
@@ -1484,20 +1455,11 @@ class BrowserAutomation:
                 elements,
                 metadata,
                 error="",
-                content=None
+                content=None,
             )
         except Exception as e:
-            return self.build_action_result(
-                False,
-                str(e),
-                None,
-                "",
-                "",
-                {},
-                error=str(e),
-                content=None
-            )
-    
+            return self.build_action_result(False, str(e), None, "", "", {}, error=str(e), content=None)
+
     async def scroll_to_text(self, text: str = Body(...)):
         """Scroll to text on the page"""
         try:
@@ -1507,7 +1469,7 @@ class BrowserAutomation:
                 page.locator(f"text={text}"),
                 page.locator(f"//*[contains(text(), '{text}')]"),
             ]
-            
+
             found = False
             for locator in locators:
                 try:
@@ -1518,12 +1480,12 @@ class BrowserAutomation:
                         break
                 except Exception:
                     continue
-            
+
             # Get updated state after action
             dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(f"scroll_to_text({text})")
-            
+
             message = f"Scrolled to text: {text}" if found else f"Text '{text}' not found or not visible on page"
-            
+
             return self.build_action_result(
                 found,
                 message,
@@ -1532,28 +1494,19 @@ class BrowserAutomation:
                 elements,
                 metadata,
                 error="",
-                content=None
+                content=None,
             )
         except Exception as e:
-            return self.build_action_result(
-                False,
-                str(e),
-                None,
-                "",
-                "",
-                {},
-                error=str(e),
-                content=None
-            )
-    
+            return self.build_action_result(False, str(e), None, "", "", {}, error=str(e), content=None)
+
     # Dropdown Actions
-    
+
     async def get_dropdown_options(self, index: int = Body(...)):
         """Get all options from a dropdown"""
         try:
             page = await self.get_current_page()
             selector_map = await self.get_selector_map()
-            
+
             if index not in selector_map:
                 return self.build_action_result(
                     False,
@@ -1562,15 +1515,15 @@ class BrowserAutomation:
                     "",
                     "",
                     {},
-                    error=f"Element with index {index} not found"
+                    error=f"Element with index {index} not found",
                 )
-            
+
             element = selector_map[index]
             options = []
-            
+
             # Try to get the options - in a real implementation, we would use appropriate selectors
             try:
-                if element.tag_name.lower() == 'select':
+                if element.tag_name.lower() == "select":
                     # For <select> elements, get options using JavaScript
                     options_js = f"""
                     Array.from(document.querySelectorAll('select')[{index-1}].options)
@@ -1584,9 +1537,9 @@ class BrowserAutomation:
                 else:
                     # For other dropdown types, try to get options using a more generic approach
                     # Example for custom dropdowns - would need refinement in real implementation
-                    await page.click(f"#{element.attributes.get('id')}") if element.attributes.get('id') else None
+                    (await page.click(f"#{element.attributes.get('id')}") if element.attributes.get("id") else None)
                     await page.wait_for_timeout(500)
-                    
+
                     options_js = """
                     Array.from(document.querySelectorAll('.dropdown-item, [role="option"], li'))
                         .filter(el => {
@@ -1600,7 +1553,7 @@ class BrowserAutomation:
                         }));
                     """
                     options = await page.evaluate(options_js)
-                    
+
                     # Close dropdown to restore state
                     await page.keyboard.press("Escape")
             except Exception as e:
@@ -1611,10 +1564,12 @@ class BrowserAutomation:
                     {"index": 1, "text": "Option 2", "value": "option2"},
                     {"index": 2, "text": "Option 3", "value": "option3"},
                 ]
-            
+
             # Get updated state
-            dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(f"get_dropdown_options({index})")
-            
+            dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(
+                f"get_dropdown_options({index})"
+            )
+
             return self.build_action_result(
                 True,
                 f"Retrieved {len(options)} options from dropdown",
@@ -1623,26 +1578,17 @@ class BrowserAutomation:
                 elements,
                 metadata,
                 error="",
-                content=json.dumps(options)  # Include options in the content field
+                content=json.dumps(options),  # Include options in the content field
             )
         except Exception as e:
-            return self.build_action_result(
-                False,
-                str(e),
-                None,
-                "",
-                "",
-                {},
-                error=str(e),
-                content=None
-            )
-    
+            return self.build_action_result(False, str(e), None, "", "", {}, error=str(e), content=None)
+
     async def select_dropdown_option(self, index: int = Body(...), option_text: str = Body(...)):
         """Select an option from a dropdown by text"""
         try:
             page = await self.get_current_page()
             selector_map = await self.get_selector_map()
-            
+
             if index not in selector_map:
                 return self.build_action_result(
                     False,
@@ -1651,37 +1597,39 @@ class BrowserAutomation:
                     "",
                     "",
                     {},
-                    error=f"Element with index {index} not found"
+                    error=f"Element with index {index} not found",
                 )
-            
+
             element = selector_map[index]
-            
+
             # Try to select the option - implementation varies by dropdown type
-            if element.tag_name.lower() == 'select':
+            if element.tag_name.lower() == "select":
                 # For standard <select> elements
                 selector = f"select option:has-text('{option_text}')"
                 await page.select_option(
-                    f"#{element.attributes.get('id')}" if element.attributes.get('id') else f"//select[{index}]", 
-                    label=option_text
+                    (f"#{element.attributes.get('id')}" if element.attributes.get("id") else f"//select[{index}]"),
+                    label=option_text,
                 )
             else:
                 # For custom dropdowns
                 # First click to open the dropdown
-                if element.attributes.get('id'):
+                if element.attributes.get("id"):
                     await page.click(f"#{element.attributes.get('id')}")
                 else:
                     await page.click(f"//{element.tag_name}[{index}]")
-                
+
                 await page.wait_for_timeout(500)
-                
+
                 # Then try to click the option
                 await page.click(f"text={option_text}")
-            
+
             await page.wait_for_timeout(500)
-            
+
             # Get updated state after action
-            dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(f"select_dropdown_option({index}, '{option_text}')")
-            
+            dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(
+                f"select_dropdown_option({index}, '{option_text}')"
+            )
+
             return self.build_action_result(
                 True,
                 f"Selected option '{option_text}' from dropdown with index {index}",
@@ -1690,58 +1638,56 @@ class BrowserAutomation:
                 elements,
                 metadata,
                 error="",
-                content=None
+                content=None,
             )
         except Exception as e:
-            return self.build_action_result(
-                False,
-                str(e),
-                None,
-                "",
-                "",
-                {},
-                error=str(e),
-                content=None
-            )
-    
+            return self.build_action_result(False, str(e), None, "", "", {}, error=str(e), content=None)
+
     # Drag and Drop
-    
+
     async def drag_drop(self, action: DragDropAction = Body(...)):
         """Perform drag and drop operation"""
         try:
             page = await self.get_current_page()
-            
+
             # Element-based drag and drop
             if action.element_source and action.element_target:
                 # In a real implementation, we would get the elements and perform the drag
                 source_desc = action.element_source
                 target_desc = action.element_target
-                
+
                 # We would locate the elements using selectors and perform the drag
                 # For this example, we'll use a simplified version
-                await page.evaluate("""
+                await page.evaluate(
+                    """
                     console.log("Simulating drag and drop between elements");
-                """)
-                
+                """
+                )
+
                 message = f"Dragged element '{source_desc}' to '{target_desc}'"
-            
+
             # Coordinate-based drag and drop
-            elif all(coord is not None for coord in [
-                action.coord_source_x, action.coord_source_y, 
-                action.coord_target_x, action.coord_target_y
-            ]):
+            elif all(
+                coord is not None
+                for coord in [
+                    action.coord_source_x,
+                    action.coord_source_y,
+                    action.coord_target_x,
+                    action.coord_target_y,
+                ]
+            ):
                 source_x = action.coord_source_x
                 source_y = action.coord_source_y
                 target_x = action.coord_target_x
                 target_y = action.coord_target_y
-                
+
                 # Perform the drag
                 await page.mouse.move(source_x, source_y)
                 await page.mouse.down()
-                
+
                 steps = max(1, action.steps or 10)
                 delay_ms = max(0, action.delay_ms or 5)
-                
+
                 for i in range(1, steps + 1):
                     ratio = i / steps
                     intermediate_x = int(source_x + (target_x - source_x) * ratio)
@@ -1749,10 +1695,10 @@ class BrowserAutomation:
                     await page.mouse.move(intermediate_x, intermediate_y)
                     if delay_ms > 0:
                         await asyncio.sleep(delay_ms / 1000)
-                
+
                 await page.mouse.move(target_x, target_y)
                 await page.mouse.up()
-                
+
                 message = f"Dragged from ({source_x}, {source_y}) to ({target_x}, {target_y})"
             else:
                 return self.build_action_result(
@@ -1762,12 +1708,14 @@ class BrowserAutomation:
                     "",
                     "",
                     {},
-                    error="Must provide either source/target selectors or coordinates"
+                    error="Must provide either source/target selectors or coordinates",
                 )
-            
+
             # Get updated state after action
-            dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(f"drag_drop({action.element_source}, {action.element_target})")
-            
+            dom_state, screenshot, elements, metadata = await self.get_updated_browser_state(
+                f"drag_drop({action.element_source}, {action.element_target})"
+            )
+
             return self.build_action_result(
                 True,
                 message,
@@ -1776,19 +1724,11 @@ class BrowserAutomation:
                 elements,
                 metadata,
                 error="",
-                content=None
+                content=None,
             )
         except Exception as e:
-            return self.build_action_result(
-                False,
-                str(e),
-                None,
-                "",
-                "",
-                {},
-                error=str(e),
-                content=None
-            )
+            return self.build_action_result(False, str(e), None, "", "", {}, error=str(e), content=None)
+
 
 # Create singleton instance
 automation_service = BrowserAutomation()
@@ -1796,12 +1736,15 @@ automation_service = BrowserAutomation()
 # Create API app
 api_app = FastAPI()
 
+
 @api_app.get("/api")
 async def health_check():
     return {"status": "ok", "message": "API server is running"}
 
+
 # Include automation service router with /api prefix
 api_app.include_router(automation_service.router, prefix="/api")
+
 
 async def test_browser_api():
     """Test the browser automation API functionality"""
@@ -1818,10 +1761,10 @@ async def test_browser_api():
         if not result.success:
             print(f"Error: {result.error}")
             return
-        
+
         print(f"URL: {result.url}")
         print(f"Title: {result.title}")
-    
+
         # Check DOM state and elements
         print(f"\nFound {result.element_count} interactive elements")
         if result.elements and result.elements.strip():
@@ -1829,17 +1772,17 @@ async def test_browser_api():
             print(result.elements)
         else:
             print("No formatted elements found, but DOM was processed")
-            
+
         # Display interactive elements as JSON
         if result.interactive_elements and len(result.interactive_elements) > 0:
             print("\nInteractive elements summary:")
             for el in result.interactive_elements:
                 print(f"  [{el['index']}] <{el['tag_name']}> {el.get('text', '')[:30]}")
-        
+
         # Screenshot info
         print(f"\nScreenshot captured: {'Yes' if result.screenshot_base64 else 'No'}")
         print(f"Viewport size: {result.viewport_width}x{result.viewport_height}")
-        
+
         # Test OCR extraction from screenshot
         print("\n--- Testing OCR Text Extraction ---")
         if result.ocr_text:
@@ -1851,9 +1794,9 @@ async def test_browser_api():
             print(result.ocr_text)
         else:
             print("No OCR text extracted from screenshot")
-        
+
         await asyncio.sleep(2)
-        
+
         # Test search functionality
         print("\n--- Testing Search ---")
         result = await automation_service.search_google(SearchGoogleAction(query="browser automation"))
@@ -1863,7 +1806,7 @@ async def test_browser_api():
         else:
             print(f"Found {result.element_count} elements after search")
             print(f"Page title: {result.title}")
-            
+
             # Test OCR extraction from search results
             if result.ocr_text:
                 print("\nOCR text from search results:")
@@ -1872,7 +1815,7 @@ async def test_browser_api():
                 print("=== OCR TEXT END ===")
             else:
                 print("\nNo OCR text extracted from search results")
-        
+
         await asyncio.sleep(2)
 
         # Test scrolling
@@ -1882,9 +1825,9 @@ async def test_browser_api():
         if result.success:
             print(f"Pixels above viewport: {result.pixels_above}")
             print(f"Pixels below viewport: {result.pixels_below}")
-        
+
         await asyncio.sleep(2)
-        
+
         # Test clicking on an element
         print("\n--- Testing Element Click ---")
         if result.element_count > 0:
@@ -1894,7 +1837,7 @@ async def test_browser_api():
             print(f"New URL after click: {click_result.url}")
         else:
             print("Skipping click test - no elements found")
-        
+
         await asyncio.sleep(2)
 
         # Test clicking on coordinates
@@ -1903,7 +1846,7 @@ async def test_browser_api():
         print(f"Coordinate click status: {'✅ Success' if coord_click_result.success else '❌ Failed'}")
         print(f"Message: {coord_click_result.message}")
         print(f"URL after coordinate click: {coord_click_result.url}")
-        
+
         await asyncio.sleep(2)
 
         # Test extracting content
@@ -1911,12 +1854,14 @@ async def test_browser_api():
         content_result = await automation_service.extract_content("test goal")
         print(f"Content extraction status: {'✅ Success' if content_result.success else '❌ Failed'}")
         if content_result.content:
-            content_preview = content_result.content[:100] + "..." if len(content_result.content) > 100 else content_result.content
+            content_preview = (
+                content_result.content[:100] + "..." if len(content_result.content) > 100 else content_result.content
+            )
             print(f"Content sample: {content_preview}")
             print(f"Total content length: {len(content_result.content)} chars")
         else:
             print("No content was extracted")
-        
+
         # Test tab management
         print("\n--- Testing Tab Management ---")
         tab_result = await automation_service.open_tab(OpenTabAction(url="https://www.example.org"))
@@ -1936,6 +1881,7 @@ async def test_browser_api():
         await automation_service.shutdown()
         print("Browser closed")
 
+
 async def test_browser_api_2():
     """Test the browser automation API functionality on the chess page"""
     try:
@@ -1952,10 +1898,10 @@ async def test_browser_api_2():
         if not result.success:
             print(f"Error: {result.error}")
             return
-        
+
         print(f"URL: {result.url}")
         print(f"Title: {result.title}")
-        
+
         # Check DOM state and elements
         print(f"\nFound {result.element_count} interactive elements")
         if result.elements and result.elements.strip():
@@ -1963,22 +1909,22 @@ async def test_browser_api_2():
             print(result.elements)
         else:
             print("No formatted elements found, but DOM was processed")
-            
+
         # Display interactive elements as JSON
         if result.interactive_elements and len(result.interactive_elements) > 0:
             print("\nInteractive elements summary:")
             for el in result.interactive_elements:
                 print(f"  [{el['index']}] <{el['tag_name']}> {el.get('text', '')[:30]}")
-        
+
         # Screenshot info
         print(f"\nScreenshot captured: {'Yes' if result.screenshot_base64 else 'No'}")
         print(f"Viewport size: {result.viewport_width}x{result.viewport_height}")
-        
+
         await asyncio.sleep(2)
 
         # Test clicking on an element (e.g., a chess square)
         print("\n--- Testing Element Click (element 5) ---")
-        if result.element_count > 4: # Ensure element 5 exists
+        if result.element_count > 4:  # Ensure element 5 exists
             click_index = 5
             click_result = await automation_service.click_element(ClickElementAction(index=click_index))
             print(f"Click status for element {click_index}: {'✅ Success' if click_result.success else '❌ Failed'}")
@@ -2002,10 +1948,12 @@ async def test_browser_api_2():
 
             # Test clicking element 1 after the first click
             print("\n--- Testing Element Click (element 1 after clicking 5) ---")
-            if click_result.element_count > 0: # Check if there are still elements
+            if click_result.element_count > 0:  # Check if there are still elements
                 click_index_2 = 1
                 click_result_2 = await automation_service.click_element(ClickElementAction(index=click_index_2))
-                print(f"Click status for element {click_index_2}: {'✅ Success' if click_result_2.success else '❌ Failed'}")
+                print(
+                    f"Click status for element {click_index_2}: {'✅ Success' if click_result_2.success else '❌ Failed'}"
+                )
                 print(f"Message: {click_result_2.message}")
                 print(f"URL after click: {click_result_2.url}")
 
@@ -2043,14 +1991,15 @@ async def test_browser_api_2():
         await automation_service.shutdown()
         print("Browser closed")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     import uvicorn
     import sys
-    
+
     # Check command line arguments for test mode
     test_mode_1 = "--test" in sys.argv
     test_mode_2 = "--test2" in sys.argv
-    
+
     if test_mode_1:
         print("Running in test mode 1")
         asyncio.run(test_browser_api())

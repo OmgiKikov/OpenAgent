@@ -18,6 +18,7 @@ mimetypes.add_type("image/gif", ".gif")
 # Maximum file size in bytes (e.g., 5MB)
 MAX_IMAGE_SIZE = 10 * 1024 * 1024
 
+
 class SandboxVisionTool(SandboxToolsBase):
     """Tool for allowing the agent to 'see' images within the sandbox."""
 
@@ -27,32 +28,32 @@ class SandboxVisionTool(SandboxToolsBase):
         # Make thread_manager accessible within the tool instance
         self.thread_manager = thread_manager
 
-    @openapi_schema({
-        "type": "function",
-        "function": {
-            "name": "see_image",
-            "description": "Allows the agent to 'see' an image file located in the /workspace directory. Provide the relative path to the image. The image content will be made available in the next turn's context.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "file_path": {
-                        "type": "string",
-                        "description": "The relative path to the image file within the /workspace directory (e.g., 'screenshots/image.png'). Supported formats: JPG, PNG, GIF, WEBP. Max size: 5MB."
-                    }
+    @openapi_schema(
+        {
+            "type": "function",
+            "function": {
+                "name": "see_image",
+                "description": "Allows the agent to 'see' an image file located in the /workspace directory. Provide the relative path to the image. The image content will be made available in the next turn's context.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "file_path": {
+                            "type": "string",
+                            "description": "The relative path to the image file within the /workspace directory (e.g., 'screenshots/image.png'). Supported formats: JPG, PNG, GIF, WEBP. Max size: 5MB.",
+                        }
+                    },
+                    "required": ["file_path"],
                 },
-                "required": ["file_path"]
-            }
+            },
         }
-    })
+    )
     @xml_schema(
         tag_name="see-image",
-        mappings=[
-            {"param_name": "file_path", "node_type": "attribute", "path": "."}
-        ],
-        example='''
+        mappings=[{"param_name": "file_path", "node_type": "attribute", "path": "."}],
+        example="""
         <!-- Example: Request to see an image named 'diagram.png' inside the 'docs' folder -->
         <see-image file_path="docs/diagram.png"></see-image>
-        '''
+        """,
     )
     async def see_image(self, file_path: str) -> ToolResult:
         """Reads an image file, converts it to base64, and adds it as a temporary message."""
@@ -74,7 +75,9 @@ class SandboxVisionTool(SandboxToolsBase):
 
             # Check file size
             if file_info.size > MAX_IMAGE_SIZE:
-                return self.fail_response(f"Image file '{cleaned_path}' is too large ({file_info.size / (1024*1024):.2f}MB). Maximum size is {MAX_IMAGE_SIZE / (1024*1024)}MB.")
+                return self.fail_response(
+                    f"Image file '{cleaned_path}' is too large ({file_info.size / (1024*1024):.2f}MB). Maximum size is {MAX_IMAGE_SIZE / (1024*1024)}MB."
+                )
 
             # Read image file content
             try:
@@ -83,38 +86,44 @@ class SandboxVisionTool(SandboxToolsBase):
                 return self.fail_response(f"Could not read image file: {cleaned_path}")
 
             # Convert to base64
-            base64_image = base64.b64encode(image_bytes).decode('utf-8')
+            base64_image = base64.b64encode(image_bytes).decode("utf-8")
 
             # Determine MIME type
             mime_type, _ = mimetypes.guess_type(full_path)
-            if not mime_type or not mime_type.startswith('image/'):
+            if not mime_type or not mime_type.startswith("image/"):
                 # Basic fallback based on extension if mimetypes fails
                 ext = os.path.splitext(cleaned_path)[1].lower()
-                if ext == '.jpg' or ext == '.jpeg': mime_type = 'image/jpeg'
-                elif ext == '.png': mime_type = 'image/png'
-                elif ext == '.gif': mime_type = 'image/gif'
-                elif ext == '.webp': mime_type = 'image/webp'
+                if ext == ".jpg" or ext == ".jpeg":
+                    mime_type = "image/jpeg"
+                elif ext == ".png":
+                    mime_type = "image/png"
+                elif ext == ".gif":
+                    mime_type = "image/gif"
+                elif ext == ".webp":
+                    mime_type = "image/webp"
                 else:
-                    return self.fail_response(f"Unsupported or unknown image format for file: '{cleaned_path}'. Supported: JPG, PNG, GIF, WEBP.")
+                    return self.fail_response(
+                        f"Unsupported or unknown image format for file: '{cleaned_path}'. Supported: JPG, PNG, GIF, WEBP."
+                    )
 
             # Prepare the temporary message content
             image_context_data = {
                 "mime_type": mime_type,
                 "base64": base64_image,
-                "file_path": cleaned_path # Include path for context
+                "file_path": cleaned_path,  # Include path for context
             }
 
             # Add the temporary message using the thread_manager callback
             # Use a distinct type like 'image_context'
             await self.thread_manager.add_message(
                 thread_id=self.thread_id,
-                type="image_context", # Use a specific type for this
-                content=image_context_data, # Store the dict directly
-                is_llm_message=False # This is context generated by a tool
+                type="image_context",  # Use a specific type for this
+                content=image_context_data,  # Store the dict directly
+                is_llm_message=False,  # This is context generated by a tool
             )
 
             # Inform the agent the image will be available next turn
             return self.success_response(f"Successfully loaded the image '{cleaned_path}'.")
 
         except Exception as e:
-            return self.fail_response(f"An unexpected error occurred while trying to see the image: {str(e)}") 
+            return self.fail_response(f"An unexpected error occurred while trying to see the image: {str(e)}")

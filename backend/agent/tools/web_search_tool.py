@@ -13,6 +13,7 @@ import logging
 
 # TODO: add subpages, etc... in filters as sometimes its necessary
 
+
 class SandboxWebSearchTool(SandboxToolsBase):
     """Tool for performing web searches using Tavily API and web scraping using Firecrawl."""
 
@@ -33,35 +34,37 @@ class SandboxWebSearchTool(SandboxToolsBase):
         # Tavily asynchronous search client
         self.tavily_client = AsyncTavilyClient(api_key=self.tavily_api_key)
 
-    @openapi_schema({
-        "type": "function",
-        "function": {
-            "name": "web_search",
-            "description": "Search the web for up-to-date information on a specific topic using the Tavily API. This tool allows you to gather real-time information from the internet to answer user queries, research topics, validate facts, and find recent developments. Results include titles, URLs, and publication dates. Use this tool for discovering relevant web pages before potentially crawling them for complete content.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "The search query to find relevant web pages. Be specific and include key terms to improve search accuracy. For best results, use natural language questions or keyword combinations that precisely describe what you're looking for."
+    @openapi_schema(
+        {
+            "type": "function",
+            "function": {
+                "name": "web_search",
+                "description": "Search the web for up-to-date information on a specific topic using the Tavily API. This tool allows you to gather real-time information from the internet to answer user queries, research topics, validate facts, and find recent developments. Results include titles, URLs, and publication dates. Use this tool for discovering relevant web pages before potentially crawling them for complete content.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "The search query to find relevant web pages. Be specific and include key terms to improve search accuracy. For best results, use natural language questions or keyword combinations that precisely describe what you're looking for.",
+                        },
+                        "num_results": {
+                            "type": "integer",
+                            "description": "The number of search results to return. Increase for more comprehensive research or decrease for focused, high-relevance results.",
+                            "default": 20,
+                        },
                     },
-                    "num_results": {
-                        "type": "integer",
-                        "description": "The number of search results to return. Increase for more comprehensive research or decrease for focused, high-relevance results.",
-                        "default": 20
-                    }
+                    "required": ["query"],
                 },
-                "required": ["query"]
-            }
+            },
         }
-    })
+    )
     @xml_schema(
         tag_name="web-search",
         mappings=[
             {"param_name": "query", "node_type": "attribute", "path": "."},
-            {"param_name": "num_results", "node_type": "attribute", "path": "."}
+            {"param_name": "num_results", "node_type": "attribute", "path": "."},
         ],
-        example='''
+        example="""
         <!--
         The web-search tool allows you to search the internet for real-time information.
         Use this tool when you need to find current information, research topics, or verify facts.
@@ -87,13 +90,9 @@ class SandboxWebSearchTool(SandboxToolsBase):
             query="latest AI research on transformer models"
             num_results="20">
         </web-search>
-        '''
+        """,
     )
-    async def web_search(
-        self,
-        query: str,
-        num_results: int = 20
-    ) -> ToolResult:
+    async def web_search(self, query: str, num_results: int = 20) -> ToolResult:
         """
         Search the web using the Tavily API to find relevant and up-to-date information.
         """
@@ -127,12 +126,11 @@ class SandboxWebSearchTool(SandboxToolsBase):
 
             # Return the complete Tavily response
             # This includes the query, answer, results, images and more
-            logging.info(f"Retrieved search results for query: '{query}' with answer and {len(search_response.get('results', []))} results")
-
-            return ToolResult(
-                success=True,
-                output=json.dumps(search_response, ensure_ascii=False)
+            logging.info(
+                f"Retrieved search results for query: '{query}' with answer and {len(search_response.get('results', []))} results"
             )
+
+            return ToolResult(success=True, output=json.dumps(search_response, ensure_ascii=False))
 
         except Exception as e:
             error_message = str(e)
@@ -142,29 +140,29 @@ class SandboxWebSearchTool(SandboxToolsBase):
                 simplified_message += "..."
             return self.fail_response(simplified_message)
 
-    @openapi_schema({
-        "type": "function",
-        "function": {
-            "name": "scrape_webpage",
-            "description": "Extract full text content from multiple webpages in a single operation. IMPORTANT: You should ALWAYS collect multiple relevant URLs from web-search results and scrape them all in a single call for efficiency. This tool saves time by processing multiple pages simultaneously rather than one at a time. The extracted text includes the main content of each page without HTML markup.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "urls": {
-                        "type": "string",
-                        "description": "Multiple URLs to scrape, separated by commas. You should ALWAYS include several URLs when possible for efficiency. Example: 'https://example.com/page1,https://example.com/page2,https://example.com/page3'"
-                    }
+    @openapi_schema(
+        {
+            "type": "function",
+            "function": {
+                "name": "scrape_webpage",
+                "description": "Extract full text content from multiple webpages in a single operation. IMPORTANT: You should ALWAYS collect multiple relevant URLs from web-search results and scrape them all in a single call for efficiency. This tool saves time by processing multiple pages simultaneously rather than one at a time. The extracted text includes the main content of each page without HTML markup.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "urls": {
+                            "type": "string",
+                            "description": "Multiple URLs to scrape, separated by commas. You should ALWAYS include several URLs when possible for efficiency. Example: 'https://example.com/page1,https://example.com/page2,https://example.com/page3'",
+                        }
+                    },
+                    "required": ["urls"],
                 },
-                "required": ["urls"]
-            }
+            },
         }
-    })
+    )
     @xml_schema(
         tag_name="scrape-webpage",
-        mappings=[
-            {"param_name": "urls", "node_type": "attribute", "path": "."}
-        ],
-        example='''
+        mappings=[{"param_name": "urls", "node_type": "attribute", "path": "."}],
+        example="""
   <!--
         IMPORTANT: The scrape-webpage tool should ONLY be used when you absolutely need
         the full content of specific web pages that can't be answered by web-search alone.
@@ -209,12 +207,9 @@ class SandboxWebSearchTool(SandboxToolsBase):
              - Interactive elements
              - Infinite scroll pages
         -->
-        '''
+        """,
     )
-    async def scrape_webpage(
-        self,
-        urls: str
-    ) -> ToolResult:
+    async def scrape_webpage(self, urls: str) -> ToolResult:
         """
         Retrieve the complete text content of multiple webpages in a single efficient operation.
 
@@ -236,7 +231,7 @@ class SandboxWebSearchTool(SandboxToolsBase):
                 return self.fail_response("Valid URLs are required.")
 
             # Split the URLs string into a list
-            url_list = [url.strip() for url in urls.split(',') if url.strip()]
+            url_list = [url.strip() for url in urls.split(",") if url.strip()]
 
             if not url_list:
                 logging.warning("No valid URLs found in the input")
@@ -252,8 +247,8 @@ class SandboxWebSearchTool(SandboxToolsBase):
             for url in url_list:
                 try:
                     # Add protocol if missing
-                    if not (url.startswith('http://') or url.startswith('https://')):
-                        url = 'https://' + url
+                    if not (url.startswith("http://") or url.startswith("https://")):
+                        url = "https://" + url
                         logging.info(f"Added https:// protocol to URL: {url}")
 
                     # Scrape this URL
@@ -262,11 +257,7 @@ class SandboxWebSearchTool(SandboxToolsBase):
 
                 except Exception as e:
                     logging.error(f"Error processing URL {url}: {str(e)}")
-                    results.append({
-                        "url": url,
-                        "success": False,
-                        "error": str(e)
-                    })
+                    results.append({"url": url, "success": False, "error": str(e)})
 
             # Summarize results
             successful = sum(1 for r in results if r.get("success", False))
@@ -291,10 +282,7 @@ class SandboxWebSearchTool(SandboxToolsBase):
                 error_details = "; ".join([f"{r.get('url')}: {r.get('error', 'Unknown error')}" for r in results])
                 return self.fail_response(f"Failed to scrape all {len(results)} URLs. Errors: {error_details}")
 
-            return ToolResult(
-                success=True,
-                output=message
-            )
+            return ToolResult(success=True, output=message)
 
         except Exception as e:
             error_message = str(e)
@@ -315,10 +303,7 @@ class SandboxWebSearchTool(SandboxToolsBase):
                     "Authorization": f"Bearer {self.firecrawl_api_key}",
                     "Content-Type": "application/json",
                 }
-                payload = {
-                    "url": url,
-                    "formats": ["markdown"]
-                }
+                payload = {"url": url, "formats": ["markdown"]}
 
                 # Use longer timeout and retry logic for more reliability
                 max_retries = 3
@@ -338,14 +323,20 @@ class SandboxWebSearchTool(SandboxToolsBase):
                         data = response.json()
                         logging.info(f"Successfully received response from Firecrawl for {url}")
                         break
-                    except (httpx.ReadTimeout, httpx.ConnectTimeout, httpx.ReadError) as timeout_err:
+                    except (
+                        httpx.ReadTimeout,
+                        httpx.ConnectTimeout,
+                        httpx.ReadError,
+                    ) as timeout_err:
                         retry_count += 1
                         logging.warning(f"Request timed out (attempt {retry_count}/{max_retries}): {str(timeout_err)}")
                         if retry_count >= max_retries:
-                            raise Exception(f"Request timed out after {max_retries} attempts with {timeout_seconds}s timeout")
+                            raise Exception(
+                                f"Request timed out after {max_retries} attempts with {timeout_seconds}s timeout"
+                            )
                         # Exponential backoff
                         logging.info(f"Waiting {2 ** retry_count}s before retry")
-                        await asyncio.sleep(2 ** retry_count)
+                        await asyncio.sleep(2**retry_count)
                     except Exception as e:
                         # Don't retry on non-timeout errors
                         logging.error(f"Error during scraping: {str(e)}")
@@ -356,11 +347,7 @@ class SandboxWebSearchTool(SandboxToolsBase):
             markdown_content = data.get("data", {}).get("markdown", "")
             logging.info(f"Extracted content from {url}: title='{title}', content length={len(markdown_content)}")
 
-            formatted_result = {
-                "title": title,
-                "url": url,
-                "text": markdown_content
-            }
+            formatted_result = {"title": title, "url": url, "text": markdown_content}
 
             # Add metadata if available
             if "metadata" in data.get("data", {}):
@@ -372,6 +359,7 @@ class SandboxWebSearchTool(SandboxToolsBase):
 
             # Extract domain from URL for the filename
             from urllib.parse import urlparse
+
             parsed_url = urlparse(url)
             domain = parsed_url.netloc.replace("www.", "")
 
@@ -389,17 +377,14 @@ class SandboxWebSearchTool(SandboxToolsBase):
             json_content = json.dumps(formatted_result, ensure_ascii=False, indent=2)
             logging.info(f"Saving content to file: {results_file_path}, size: {len(json_content)} bytes")
 
-            self.sandbox.fs.upload_file(
-                results_file_path,
-                json_content.encode()
-            )
+            self.sandbox.fs.upload_file(results_file_path, json_content.encode())
 
             return {
                 "url": url,
                 "success": True,
                 "title": title,
                 "file_path": results_file_path,
-                "content_length": len(markdown_content)
+                "content_length": len(markdown_content),
             }
 
         except Exception as e:
@@ -407,13 +392,11 @@ class SandboxWebSearchTool(SandboxToolsBase):
             logging.error(f"Error scraping URL '{url}': {error_message}")
 
             # Create an error result
-            return {
-                "url": url,
-                "success": False,
-                "error": error_message
-            }
+            return {"url": url, "success": False, "error": error_message}
+
 
 if __name__ == "__main__":
+
     async def test_web_search():
         """Test function for the web search tool"""
         # This test function is not compatible with the sandbox version
