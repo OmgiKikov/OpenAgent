@@ -157,7 +157,7 @@ class ThreadManager:
         processor_config: Optional[ProcessorConfig] = None,
         tool_choice: ToolChoice = "auto",
         native_max_auto_continues: int = 25,
-        max_xml_tool_calls: int = 0,
+        max_tool_calls: int = 0,
         include_xml_examples: bool = False,
         enable_thinking: Optional[bool] = False,
         reasoning_effort: Optional[str] = 'low',
@@ -177,7 +177,7 @@ class ThreadManager:
             tool_choice: Tool choice preference ("auto", "required", "none")
             native_max_auto_continues: Maximum number of automatic continuations when
                                       finish_reason="tool_calls" (0 disables auto-continue)
-            max_xml_tool_calls: Maximum number of XML tool calls to allow (0 = no limit)
+            max_tool_calls: Maximum number of tool calls to allow (0 = no limit)
             include_xml_examples: Whether to include XML tool examples in the system prompt
             enable_thinking: Whether to enable thinking before making a decision
             reasoning_effort: The effort level for reasoning
@@ -191,14 +191,14 @@ class ThreadManager:
         logger.info(f"Using model: {llm_model}")
         # Log parameters
         logger.info(f"Parameters: model={llm_model}, temperature={llm_temperature}, max_tokens={llm_max_tokens}")
-        logger.info(f"Auto-continue: max={native_max_auto_continues}, XML tool limit={max_xml_tool_calls}")
+        logger.info(f"Auto-continue: max={native_max_auto_continues}, Tool limit={max_tool_calls}")
 
         # Log model info
         logger.info(f"🤖 Thread {thread_id}: Using model {llm_model}")
 
-        # Apply max_xml_tool_calls if specified and not already set in config
-        if max_xml_tool_calls > 0 and not processor_config.max_xml_tool_calls:
-            processor_config.max_xml_tool_calls = max_xml_tool_calls
+        # Apply max_tool_calls if specified and not already set in config
+        if max_tool_calls > 0 and not processor_config.max_tool_calls:
+            processor_config.max_tool_calls = max_tool_calls
 
         # Create a working copy of the system prompt to potentially modify
         working_system_prompt = system_prompt.copy()
