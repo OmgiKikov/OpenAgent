@@ -26,7 +26,6 @@ class MCPTools(Tool):
                     'name': tool.name,
                     'description': tool.description,
                     'parameters': tool.inputSchema
-
                 }
             }
         )
@@ -40,7 +39,9 @@ class MCPTools(Tool):
             return super().__getattribute__(name)
         except AttributeError:
             async def remote_func(**kwargs):
-                return await self._session.call_tool(name, arguments=kwargs)
+                result = await self._session.call_tool(name, arguments=kwargs)
+                content = json.dumps([element.model_dump(mode='json') for element in result.content])
+                return ToolResult(success=not result.isError, output=json.dumps(content, ensure_ascii=False))
             return remote_func
 
 

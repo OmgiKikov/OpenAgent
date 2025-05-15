@@ -10,7 +10,7 @@ from agent.tools.message_tool import MessageTool
 from agent.tools.sb_deploy_tool import SandboxDeployTool
 from agent.tools.sb_expose_tool import SandboxExposeTool
 from agent.tools.web_search_tool import SandboxWebSearchTool
-from agent.tools.mcp_tools import GoogleCalendarTool
+from agent.tools.mcp_tools import MCPTools
 from dotenv import load_dotenv
 from utils.config import config
 
@@ -75,7 +75,7 @@ async def run_agent(
     await thread_manager.add_tool(SandboxVisionTool, project_id=project_id, thread_id=thread_id, thread_manager=thread_manager)
 
     if mcp_session is not None:
-        await thread_manager.add_tool(GoogleCalendarTool, session=mcp_session)
+        await thread_manager.add_tool(MCPTools, session=mcp_session)
 
     # Add data providers tool if RapidAPI key is available
     if config.RAPID_API_KEY:
@@ -207,15 +207,15 @@ async def run_agent(
                 max_xml_tool_calls=1,
                 temporary_message=temporary_message,
                 processor_config=ProcessorConfig(
-                    xml_tool_calling=True,
-                    native_tool_calling=False,
+                    xml_tool_calling=False,
+                    native_tool_calling=True,
                     execute_tools=True,
                     execute_on_stream=True,
                     tool_execution_strategy="parallel",
                     xml_adding_strategy="user_message"
                 ),
                 native_max_auto_continues=native_max_auto_continues,
-                include_xml_examples=True,
+                include_xml_examples=False,
                 enable_thinking=enable_thinking,
                 reasoning_effort=reasoning_effort,
                 enable_context_manager=enable_context_manager
