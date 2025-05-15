@@ -112,6 +112,36 @@ class ResponseProcessor:
         self.tool_registry = tool_registry
         self.add_message = add_message_callback
 
+    async def _create_initial_status_message(
+        self,
+        thread_id: str,
+        thread_run_id: str
+    ) -> AsyncGenerator[Dict[str, Any]]:
+        start_content = {
+            "status_type": "thread_run_start",
+            "thread_run_id": thread_run_id,
+        }
+        start_msg_obj = await self.add_message(
+            thread_id=thread_id,
+            type="status",
+            content=start_content,
+            is_llm_message=False,
+            metadata={"thread_run_id": thread_run_id},
+        )
+        if start_msg_obj:
+            yield start_msg_obj
+
+        assist_start_content = {"status_type": "assistant_response_start"}
+        assist_start_msg_obj = await self.add_message(
+            thread_id=thread_id,
+            type="status",
+            content=assist_start_content,
+            is_llm_message=False,
+            metadata={"thread_run_id": thread_run_id},
+        )
+        if assist_start_msg_obj:
+            yield assist_start_msg_obj
+
     async def process_streaming_response(
         self,
         llm_response: AsyncGenerator,
@@ -156,32 +186,8 @@ class ResponseProcessor:
         thread_run_id = str(uuid.uuid4())
 
         try:
-            # --- Save and Yield Start Events ---
-            start_content = {
-                "status_type": "thread_run_start",
-                "thread_run_id": thread_run_id,
-            }
-            start_msg_obj = await self.add_message(
-                thread_id=thread_id,
-                type="status",
-                content=start_content,
-                is_llm_message=False,
-                metadata={"thread_run_id": thread_run_id},
-            )
-            if start_msg_obj:
-                yield start_msg_obj
-
-            assist_start_content = {"status_type": "assistant_response_start"}
-            assist_start_msg_obj = await self.add_message(
-                thread_id=thread_id,
-                type="status",
-                content=assist_start_content,
-                is_llm_message=False,
-                metadata={"thread_run_id": thread_run_id},
-            )
-            if assist_start_msg_obj:
-                yield assist_start_msg_obj
-            # --- End Start Events ---
+            async for msg in self._create_initial_status_message(thread_id=thread_id, thread_run_id=thread_run_id):
+                yield msg
 
             async for chunk in llm_response:
                 if (
