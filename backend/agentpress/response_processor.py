@@ -491,7 +491,8 @@ class ResponseProcessor:
                 if finish_msg_obj:
                     yield finish_msg_obj
                 logger.info(
-                    f"Stream finished with reason: {finish_reason} after {tool_call_count} total tool calls ({xml_tool_call_count} XML, {native_tool_call_count} native)"
+                    f"Stream finished with reason: {finish_reason} after {tool_call_count} total tool calls"
+                    f" ({xml_tool_call_count} XML, {native_tool_call_count} native)"
                 )
 
             # --- SAVE and YIELD Final Assistant Message ---
@@ -646,7 +647,8 @@ class ResponseProcessor:
                 # Or execute now if not streamed
                 elif final_tool_calls_to_process and not config.execute_on_stream:
                     logger.info(
-                        f"Executing {len(final_tool_calls_to_process)} tools ({config.tool_execution_strategy}) after stream"
+                        f"Executing {len(final_tool_calls_to_process)} "
+                        f"tools ({config.tool_execution_strategy}) after stream"
                     )
                     results_list = await self._execute_tools(
                         final_tool_calls_to_process, config.tool_execution_strategy
@@ -1056,7 +1058,8 @@ class ResponseProcessor:
                     yield finish_msg_obj
                 if finish_reason == "tool_limit_reached":
                     logger.info(
-                        f"Non-streaming response finished with reason: tool_limit_reached after {tool_call_count} total tool calls"
+                        f"Non-streaming response finished with reason: "
+                        f"tool_limit_reached after {tool_call_count} total tool calls"
                     )
 
         except Exception as e:
@@ -1126,7 +1129,7 @@ class ResponseProcessor:
                     nesting_level -= 1
                     if nesting_level == 0:
                         content = xml_chunk[content_start:next_end]
-                        remaining = xml_chunk[next_end + len(end_tag) :]
+                        remaining = xml_chunk[next_end + len(end_tag):]
                         return content, remaining
                     else:
                         pos = next_end + len(end_tag)
