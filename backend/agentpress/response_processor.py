@@ -99,7 +99,7 @@ class StreamingState:
     xml_tool_call_count: int = 0
     native_tool_call_count: int = 0
     finish_reason: Optional[str] = None
-    last_assistant_message_object = None
+    last_assistant_message_object: Optional[Dict[str, Any]] = None
     tool_result_message_objects: Dict = field(default_factory=dict)
     has_printed_thinking_prefix: bool = False
 
@@ -138,6 +138,43 @@ class ResponseProcessor:
         metadata["thread_run_id"] = thread_run_id
         return await self._add_message_callback(
             thread_id=thread_id, type="status", content=content, is_llm_message=False, metadata=metadata
+        )
+
+    async def _add_assistant_message(
+        self,
+        thread_id: str,
+        thread_run_id: Optional[str],
+        content: Dict[str, Any],
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Optional[Dict[str, Any]]:
+        metadata = metadata.copy() if metadata is not None else {}
+        metadata["thread_run_id"] = thread_run_id
+        return await self._add_message_callback(
+            thread_id=thread_id, type="assistant", content=content, is_llm_message=True, metadata=metadata
+        )
+
+    async def _add_cost_message(
+        self,
+        thread_id: str,
+        thread_run_id: Optional[str],
+        cost: float,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Optional[Dict[str, Any]]:
+        metadata = metadata.copy() if metadata is not None else {}
+        metadata["thread_run_id"] = thread_run_id
+        return await self._add_message_callback(
+            thread_id=thread_id, type="cost", content={"cost": cost}, is_llm_message=False, metadata=metadata
+        )
+
+    async def _add_tool_message(
+        self, thread_id: str, content: Dict[str, Any], metadata: Optional[Dict[str, Any]]
+    ) -> Optional[Dict[str, Any]]:
+        return await self._add_message_callback(
+            thread_id=thread_id,
+            type="tool",
+            content=content,
+            is_llm_message=True,
+            metadata=metadata,
         )
 
     async def _create_thread_run_start_status_message(
@@ -552,18 +589,14 @@ class ResponseProcessor:
                             except json.JSONDecodeError:
                                 continue
 
-                message_data = {  # Dict to be saved in 'content'
-                    "role": "assistant",
-                    "content": streaming_state.accumulated_content,
-                    "tool_calls": complete_native_tool_calls or None,
-                }
-
-                streaming_state.last_assistant_message_object = await self._add_message_callback(
+                streaming_state.last_assistant_message_object = await self._add_assistant_message(
                     thread_id=thread_id,
-                    type="assistant",
-                    content=message_data,
-                    is_llm_message=True,
-                    metadata={"thread_run_id": thread_run_id},
+                    thread_run_id=thread_run_id,
+                    content={
+                        "role": "assistant",
+                        "content": streaming_state.accumulated_content,
+                        "tool_calls": complete_native_tool_calls or None,
+                    },
                 )
 
                 if streaming_state.last_assistant_message_object:
@@ -750,13 +783,7 @@ class ResponseProcessor:
                     )
                     if final_cost is not None and final_cost > 0:
                         logger.info(f"Calculated final cost for stream: {final_cost}")
-                        await self._add_message_callback(
-                            thread_id=thread_id,
-                            type="cost",
-                            content={"cost": final_cost},
-                            is_llm_message=False,  # Cost is metadata
-                            metadata={"thread_run_id": thread_run_id},  # Keep track of the run
-                        )
+                        await self._add_cost_message(thread_id=thread_id, thread_run_id=thread_run_id, cost=final_cost)
                         logger.info(f"Cost message saved for stream: {final_cost}")
                     else:
                         logger.info("Stream cost calculation resulted in zero or None, not storing cost message.")
@@ -915,17 +942,14 @@ class ResponseProcessor:
                                 tool_call_count += 1
 
             # --- SAVE and YIELD Final Assistant Message ---
-            message_data = {
-                "role": "assistant",
-                "content": content,
-                "tool_calls": native_tool_calls_for_message or None,
-            }
-            assistant_message_object = await self._add_message_callback(
+            assistant_message_object = await self._add_assistant_message(
                 thread_id=thread_id,
-                type="assistant",
-                content=message_data,
-                is_llm_message=True,
-                metadata={"thread_run_id": thread_run_id},
+                thread_run_id=thread_run_id,
+                content={
+                    "role": "assistant",
+                    "content": content,
+                    "tool_calls": native_tool_calls_for_message or None,
+                },
             )
             if assistant_message_object:
                 yield assistant_message_object
@@ -967,13 +991,7 @@ class ResponseProcessor:
 
                     if final_cost is not None and final_cost > 0:
                         logger.info(f"Calculated final cost for non-stream: {final_cost}")
-                        await self._add_message_callback(
-                            thread_id=thread_id,
-                            type="cost",
-                            content={"cost": final_cost},
-                            is_llm_message=False,  # Cost is metadata
-                            metadata={"thread_run_id": thread_run_id},  # Keep track of the run
-                        )
+                        await self._add_cost_message(thread_id=thread_id, thread_run_id=thread_run_id, cost=final_cost)
                         logger.info(f"Cost message saved for non-stream: {final_cost}")
                     else:
                         logger.info("Non-stream cost calculation resulted in zero or None, not storing cost message.")
@@ -1542,31 +1560,20 @@ class ResponseProcessor:
             content = self._format_xml_tool_result(tool_call, result)
 
             # Add the message with the appropriate role
-            result_message = {"role": result_role, "content": content}
-
-            message_id = await self._add_message_callback(
-                thread_id=thread_id,
-                type="tool",
-                content=result_message,
-                is_llm_message=True,
-                metadata=metadata,
+            return await self._add_tool_message(
+                thread_id=thread_id, content={"role": result_role, "content": content}, metadata=metadata
             )
-
-            return message_id
 
         except Exception as e:
             logger.error(f"Error adding tool result: {str(e)}", exc_info=True)
             # Fallback to a simple message in case of error
             try:
                 fallback_message = {"role": "user", "content": str(result)}
-                message_id = await self._add_message_callback(
+                return await self._add_tool_message(
                     thread_id=thread_id,
-                    type="tool",
                     content=fallback_message,
-                    is_llm_message=True,
                     metadata=({"assistant_message_id": assistant_message_id} if assistant_message_id else {}),
                 )
-                return message_id
             except Exception as e2:
                 logger.error(f"Failed even with fallback message: {str(e2)}", exc_info=True)
                 return None
@@ -1596,24 +1603,17 @@ class ResponseProcessor:
             # Fallback to string
             content = str(result)
 
-        # Create the tool response message
-        tool_message = {
-            "role": "tool",
-            "tool_call_id": tool_call["id"],
-            "name": function_name,
-            "content": content,
-        }
-
         # Add as a tool message to the conversation history
-        message_id = await self._add_message_callback(
+        return await self._add_tool_message(
             thread_id=thread_id,
-            type="tool",
-            content=tool_message,
-            is_llm_message=True,
+            content={
+                "role": "tool",
+                "tool_call_id": tool_call["id"],
+                "name": function_name,
+                "content": content,
+            },
             metadata=metadata,
         )
-
-        return message_id
 
     def _create_tool_context(
         self,
