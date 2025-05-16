@@ -12,22 +12,10 @@ import json
 import asyncio
 import re
 import uuid
-from typing import (
-    List,
-    Dict,
-    Any,
-    Optional,
-    Tuple,
-    AsyncGenerator,
-    Callable,
-    Union,
-    Literal,
-)
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import List, Dict, Any, Optional, Tuple, AsyncGenerator, Callable, Union, Literal, Set
 from datetime import datetime, timezone
-
 from litellm.cost_calculator import completion_cost
-
 from agentpress.tool import ToolResult
 from agentpress.tool_registry import ToolRegistry
 from utils.logger import logger
@@ -98,6 +86,24 @@ class ProcessorConfig:
             raise ValueError("max_tool_calls must be a non-negative integer (0 = no limit)")
 
 
+@dataclass
+class StreamingState:
+    accumulated_content: str = ""
+    tool_calls_buffer: Dict = field(default_factory=dict)
+    current_xml_content: str = ""
+    xml_chunks_buffer: List = field(default_factory=list)
+    pending_tool_executions: List = field(default_factory=list)
+    yielded_tool_indices: Set = field(default_factory=set)
+    tool_index: int = 0
+    tool_call_count: int = 0
+    xml_tool_call_count: int = 0
+    native_tool_call_count: int = 0
+    finish_reason: Optional[str] = None
+    last_assistant_message_object = None
+    tool_result_message_objects: Dict = field(default_factory=dict)
+    has_printed_thinking_prefix: bool = False
+
+
 class ResponseProcessor:
     """Processes LLM responses, extracting and executing tool calls."""
 
@@ -112,32 +118,42 @@ class ResponseProcessor:
         self.tool_registry = tool_registry
         self.add_message = add_message_callback
 
-    async def _create_initial_status_message(
-        self,
-        thread_id: str,
-        thread_run_id: str
-    ) -> AsyncGenerator[Dict[str, Any]]:
-        start_content = {
-            "status_type": "thread_run_start",
-            "thread_run_id": thread_run_id,
-        }
-        start_msg_obj = await self.add_message(
+    async def _create_thread_run_start_status_message(
+        self, thread_id: str, thread_run_id: str
+    ) -> Optional[Dict[str, Any]]:
+        return await self.add_message(
             thread_id=thread_id,
             type="status",
-            content=start_content,
+            content={
+                "status_type": "thread_run_start",
+                "thread_run_id": thread_run_id,
+            },
             is_llm_message=False,
             metadata={"thread_run_id": thread_run_id},
+        )
+
+    async def _create_assistant_response_start_status_message(
+        self, thread_id: str, thread_run_id: str
+    ) -> Optional[Dict[str, Any]]:
+        return await self.add_message(
+            thread_id=thread_id,
+            type="status",
+            content={"status_type": "assistant_response_start"},
+            is_llm_message=False,
+            metadata={"thread_run_id": thread_run_id},
+        )
+
+    async def _create_initial_status_messages(
+        self, thread_id: str, thread_run_id: str
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        start_msg_obj = await self._create_thread_run_start_status_message(
+            thread_id=thread_id, thread_run_id=thread_run_id
         )
         if start_msg_obj:
             yield start_msg_obj
 
-        assist_start_content = {"status_type": "assistant_response_start"}
-        assist_start_msg_obj = await self.add_message(
-            thread_id=thread_id,
-            type="status",
-            content=assist_start_content,
-            is_llm_message=False,
-            metadata={"thread_run_id": thread_run_id},
+        assist_start_msg_obj = await self._create_assistant_response_start_status_message(
+            thread_id=thread_id, thread_run_id=thread_run_id
         )
         if assist_start_msg_obj:
             yield assist_start_msg_obj
@@ -162,20 +178,7 @@ class ResponseProcessor:
         Yields:
             Complete message objects matching the DB schema, except for content chunks.
         """
-        accumulated_content = ""
-        tool_calls_buffer = {}
-        current_xml_content = ""
-        xml_chunks_buffer = []
-        pending_tool_executions = []
-        yielded_tool_indices = set()  # Stores indices of tools whose *status* has been yielded
-        tool_index = 0
-        tool_call_count = 0  # Combined counter for all tool calls
-        xml_tool_call_count = 0
-        native_tool_call_count = 0
-        finish_reason = None
-        last_assistant_message_object = None  # Store the final saved assistant message object
-        tool_result_message_objects = {}  # tool_index -> full saved message object
-        has_printed_thinking_prefix = False  # Flag for printing thinking prefix only once
+        streaming_state = StreamingState()
 
         logger.info(
             f"Streaming Config: XML={config.xml_tool_calling}, Native={config.native_tool_calling}, "
@@ -186,7 +189,7 @@ class ResponseProcessor:
         thread_run_id = str(uuid.uuid4())
 
         try:
-            async for msg in self._create_initial_status_message(thread_id=thread_id, thread_run_id=thread_run_id):
+            async for msg in self._create_initial_status_messages(thread_id=thread_id, thread_run_id=thread_run_id):
                 yield msg
 
             async for chunk in llm_response:
@@ -196,29 +199,29 @@ class ResponseProcessor:
                     and hasattr(chunk.choices[0], "finish_reason")
                     and chunk.choices[0].finish_reason
                 ):
-                    finish_reason = chunk.choices[0].finish_reason
-                    logger.debug(f"Detected finish_reason: {finish_reason}")
+                    streaming_state.finish_reason = chunk.choices[0].finish_reason
+                    logger.debug(f"Detected finish_reason: {streaming_state.finish_reason}")
 
                 if hasattr(chunk, "choices") and chunk.choices:
                     delta = chunk.choices[0].delta if hasattr(chunk.choices[0], "delta") else None
 
                     # Check for and log Anthropic thinking content
                     if delta and hasattr(delta, "reasoning_content") and delta.reasoning_content:
-                        if not has_printed_thinking_prefix:
+                        if not streaming_state.has_printed_thinking_prefix:
                             # print("[THINKING]: ", end='', flush=True)
-                            has_printed_thinking_prefix = True
+                            streaming_state.has_printed_thinking_prefix = True
                         # print(delta.reasoning_content, end='', flush=True)
                         # Append reasoning to main content to be saved in the final message
-                        accumulated_content += delta.reasoning_content
+                        streaming_state.accumulated_content += delta.reasoning_content
 
                     # Process content chunk
                     if delta and hasattr(delta, "content") and delta.content:
                         chunk_content = delta.content
                         # print(chunk_content, end='', flush=True)
-                        accumulated_content += chunk_content
-                        current_xml_content += chunk_content
+                        streaming_state.accumulated_content += chunk_content
+                        streaming_state.current_xml_content += chunk_content
 
-                        if not (config.max_tool_calls > 0 and tool_call_count >= config.max_tool_calls):
+                        if not (config.max_tool_calls > 0 and streaming_state.tool_call_count >= config.max_tool_calls):
                             # Yield ONLY content chunk (don't save)
                             now_chunk = datetime.now(timezone.utc).isoformat()
                             yield {
@@ -241,25 +244,27 @@ class ResponseProcessor:
 
                         # --- Process XML Tool Calls (if enabled and limit not reached) ---
                         if config.xml_tool_calling and not (
-                            config.max_tool_calls > 0 and tool_call_count >= config.max_tool_calls
+                            config.max_tool_calls > 0 and streaming_state.tool_call_count >= config.max_tool_calls
                         ):
-                            xml_chunks = self._extract_xml_chunks(current_xml_content)
+                            xml_chunks = self._extract_xml_chunks(streaming_state.current_xml_content)
                             for xml_chunk in xml_chunks:
-                                current_xml_content = current_xml_content.replace(xml_chunk, "", 1)
-                                xml_chunks_buffer.append(xml_chunk)
+                                streaming_state.current_xml_content = streaming_state.current_xml_content.replace(
+                                    xml_chunk, "", 1
+                                )
+                                streaming_state.xml_chunks_buffer.append(xml_chunk)
                                 result = self._parse_xml_tool_call(xml_chunk)
                                 if result:
                                     tool_call, parsing_details = result
-                                    xml_tool_call_count += 1
-                                    tool_call_count += 1
+                                    streaming_state.xml_tool_call_count += 1
+                                    streaming_state.tool_call_count += 1
                                     current_assistant_id = (
-                                        last_assistant_message_object["message_id"]
-                                        if last_assistant_message_object
+                                        streaming_state.last_assistant_message_object["message_id"]
+                                        if streaming_state.last_assistant_message_object
                                         else None
                                     )
                                     context = self._create_tool_context(
                                         tool_call,
-                                        tool_index,
+                                        streaming_state.tool_index,
                                         current_assistant_id,
                                         parsing_details,
                                     )
@@ -271,28 +276,33 @@ class ResponseProcessor:
                                         )
                                         if started_msg_obj:
                                             yield started_msg_obj
-                                        yielded_tool_indices.add(tool_index)  # Mark status as yielded
+                                        streaming_state.yielded_tool_indices.add(
+                                            streaming_state.tool_index
+                                        )  # Mark status as yielded
 
                                         execution_task = asyncio.create_task(self._execute_tool(tool_call))
-                                        pending_tool_executions.append(
+                                        streaming_state.pending_tool_executions.append(
                                             {
                                                 "task": execution_task,
                                                 "tool_call": tool_call,
-                                                "tool_index": tool_index,
+                                                "tool_index": streaming_state.tool_index,
                                                 "context": context,
                                             }
                                         )
-                                        tool_index += 1
+                                        streaming_state.tool_index += 1
 
-                                    if config.max_tool_calls > 0 and tool_call_count >= config.max_tool_calls:
+                                    if (
+                                        config.max_tool_calls > 0
+                                        and streaming_state.tool_call_count >= config.max_tool_calls
+                                    ):
                                         logger.debug(f"Reached tool call limit ({config.max_tool_calls})")
-                                        finish_reason = "tool_limit_reached"
+                                        streaming_state.finish_reason = "tool_limit_reached"
                                         break  # Stop processing more XML chunks in this delta
 
                     # --- Process Native Tool Call Chunks ---
                     if (
                         config.native_tool_calling
-                        and not (config.max_tool_calls > 0 and tool_call_count >= config.max_tool_calls)
+                        and not (config.max_tool_calls > 0 and streaming_state.tool_call_count >= config.max_tool_calls)
                         and delta
                         and hasattr(delta, "tool_calls")
                         and delta.tool_calls
@@ -343,8 +353,8 @@ class ResponseProcessor:
                             idx = tool_call_chunk.index if hasattr(tool_call_chunk, "index") else 0
 
                             # Initialize buffer entry if needed
-                            if idx not in tool_calls_buffer:
-                                tool_calls_buffer[idx] = {
+                            if idx not in streaming_state.tool_calls_buffer:
+                                streaming_state.tool_calls_buffer[idx] = {
                                     "id": None,
                                     "function": {"name": None, "arguments": ""},
                                     "type": "function",
@@ -352,56 +362,63 @@ class ResponseProcessor:
 
                             # Update buffer with chunk data
                             if hasattr(tool_call_chunk, "id") and tool_call_chunk.id:
-                                tool_calls_buffer[idx]["id"] = tool_call_chunk.id
+                                streaming_state.tool_calls_buffer[idx]["id"] = tool_call_chunk.id
 
                             if hasattr(tool_call_chunk, "function"):
                                 if hasattr(tool_call_chunk.function, "name") and tool_call_chunk.function.name:
-                                    tool_calls_buffer[idx]["function"]["name"] = tool_call_chunk.function.name
+                                    streaming_state.tool_calls_buffer[idx]["function"][
+                                        "name"
+                                    ] = tool_call_chunk.function.name
 
                                 if (
                                     hasattr(tool_call_chunk.function, "arguments")
                                     and tool_call_chunk.function.arguments
                                 ):
-                                    current_args = tool_calls_buffer[idx]["function"]["arguments"]
-                                    tool_calls_buffer[idx]["function"]["arguments"] = (
+                                    current_args = streaming_state.tool_calls_buffer[idx]["function"]["arguments"]
+                                    streaming_state.tool_calls_buffer[idx]["function"]["arguments"] = (
                                         current_args + tool_call_chunk.function.arguments
                                     )
 
                             # Check if the tool call is complete
                             has_complete_tool_call = (
-                                tool_calls_buffer[idx]["id"]
-                                and tool_calls_buffer[idx]["function"]["name"]
-                                and tool_calls_buffer[idx]["function"]["arguments"]
+                                streaming_state.tool_calls_buffer[idx]["id"]
+                                and streaming_state.tool_calls_buffer[idx]["function"]["name"]
+                                and streaming_state.tool_calls_buffer[idx]["function"]["arguments"]
                             )
 
                             if has_complete_tool_call:
                                 # Validate that arguments are valid JSON
                                 try:
-                                    json.loads(tool_calls_buffer[idx]["function"]["arguments"])
+                                    json.loads(streaming_state.tool_calls_buffer[idx]["function"]["arguments"])
                                 except json.JSONDecodeError:
                                     has_complete_tool_call = False
 
                             if has_complete_tool_call and config.execute_tools and config.execute_on_stream:
-                                native_tool_call_count += 1
-                                tool_call_count += 1
+                                streaming_state.native_tool_call_count += 1
+                                streaming_state.tool_call_count += 1
 
-                                if config.max_tool_calls > 0 and tool_call_count > config.max_tool_calls:
+                                if (
+                                    config.max_tool_calls > 0
+                                    and streaming_state.tool_call_count > config.max_tool_calls
+                                ):
                                     logger.debug(f"Reached tool call limit ({config.max_tool_calls})")
-                                    finish_reason = "tool_limit_reached"
+                                    streaming_state.finish_reason = "tool_limit_reached"
                                     break  # Stop processing more native tool calls in this loop
 
-                                current_tool = tool_calls_buffer[idx]
+                                current_tool = streaming_state.tool_calls_buffer[idx]
                                 tool_call_data = {
                                     "function_name": current_tool["function"]["name"],
                                     "arguments": json.loads(current_tool["function"]["arguments"]),
                                     "id": current_tool["id"],
                                 }
                                 current_assistant_id = (
-                                    last_assistant_message_object["message_id"]
-                                    if last_assistant_message_object
+                                    streaming_state.last_assistant_message_object["message_id"]
+                                    if streaming_state.last_assistant_message_object
                                     else None
                                 )
-                                context = self._create_tool_context(tool_call_data, tool_index, current_assistant_id)
+                                context = self._create_tool_context(
+                                    tool_call_data, streaming_state.tool_index, current_assistant_id
+                                )
 
                                 # Save and Yield tool_started status
                                 started_msg_obj = await self._yield_and_save_tool_started(
@@ -409,36 +426,40 @@ class ResponseProcessor:
                                 )
                                 if started_msg_obj:
                                     yield started_msg_obj
-                                yielded_tool_indices.add(tool_index)  # Mark status as yielded
+                                streaming_state.yielded_tool_indices.add(
+                                    streaming_state.tool_index
+                                )  # Mark status as yielded
 
                                 execution_task = asyncio.create_task(self._execute_tool(tool_call_data))
-                                pending_tool_executions.append(
+                                streaming_state.pending_tool_executions.append(
                                     {
                                         "task": execution_task,
                                         "tool_call": tool_call_data,
-                                        "tool_index": tool_index,
+                                        "tool_index": streaming_state.tool_index,
                                         "context": context,
                                     }
                                 )
-                                tool_index += 1
+                                streaming_state.tool_index += 1
 
-                if finish_reason == "tool_limit_reached":
+                if streaming_state.finish_reason == "tool_limit_reached":
                     logger.info("Stopping stream processing after loop due to tool call limit")
                     break
 
             # Wait for pending tool executions from streaming phase
             tool_results_buffer = []  # Stores (tool_call, result, tool_index, context)
-            if pending_tool_executions:
-                logger.info(f"Waiting for {len(pending_tool_executions)} pending streamed tool executions")
+            if streaming_state.pending_tool_executions:
+                logger.info(
+                    f"Waiting for {len(streaming_state.pending_tool_executions)} pending streamed tool executions"
+                )
                 # ... (asyncio.wait logic) ...
-                pending_tasks = [execution["task"] for execution in pending_tool_executions]
+                pending_tasks = [execution["task"] for execution in streaming_state.pending_tool_executions]
                 done, _ = await asyncio.wait(pending_tasks)
 
-                for execution in pending_tool_executions:
+                for execution in streaming_state.pending_tool_executions:
                     tool_idx = execution.get("tool_index", -1)
                     context = execution["context"]
                     # Check if status was already yielded during stream run
-                    if tool_idx in yielded_tool_indices:
+                    if tool_idx in streaming_state.yielded_tool_indices:
                         logger.debug(f"Status for tool index {tool_idx} already yielded.")
                         # Still need to process the result for the buffer
                         try:
@@ -469,7 +490,7 @@ class ResponseProcessor:
                             )
                             if completed_msg_obj:
                                 yield completed_msg_obj
-                            yielded_tool_indices.add(tool_idx)
+                            streaming_state.yielded_tool_indices.add(tool_idx)
                     except Exception as e:
                         logger.error(
                             f"Error getting result/yielding status for pending tool execution {tool_idx}: {str(e)}"
@@ -479,13 +500,13 @@ class ResponseProcessor:
                         error_msg_obj = await self._yield_and_save_tool_error(context, thread_id, thread_run_id)
                         if error_msg_obj:
                             yield error_msg_obj
-                        yielded_tool_indices.add(tool_idx)
+                        streaming_state.yielded_tool_indices.add(tool_idx)
 
             # Save and yield finish status if limit was reached
-            if finish_reason == "tool_limit_reached":
+            if streaming_state.finish_reason == "tool_limit_reached":
                 finish_content = {
                     "status_type": "finish",
-                    "finish_reason": finish_reason,
+                    "finish_reason": streaming_state.finish_reason,
                 }
                 finish_msg_obj = await self.add_message(
                     thread_id=thread_id,
@@ -497,27 +518,33 @@ class ResponseProcessor:
                 if finish_msg_obj:
                     yield finish_msg_obj
                 logger.info(
-                    f"Stream finished with reason: {finish_reason} after {tool_call_count} total tool calls"
-                    f" ({xml_tool_call_count} XML, {native_tool_call_count} native)"
+                    f"Stream finished with reason: {streaming_state.finish_reason} "
+                    f"after {streaming_state.tool_call_count} total tool calls"
+                    f" ({streaming_state.xml_tool_call_count} XML, {streaming_state.native_tool_call_count} native)"
                 )
 
             # --- SAVE and YIELD Final Assistant Message ---
             complete_native_tool_calls = []
-            if accumulated_content:
+            if streaming_state.accumulated_content:
                 # ... (Truncate accumulated_content logic) ...
-                if config.max_tool_calls > 0 and tool_call_count >= config.max_tool_calls and xml_chunks_buffer:
-                    last_xml_chunk = xml_chunks_buffer[-1]
-                    last_chunk_end_pos = accumulated_content.find(last_xml_chunk) + len(last_xml_chunk)
+                if (
+                    config.max_tool_calls > 0
+                    and streaming_state.tool_call_count >= config.max_tool_calls
+                    and streaming_state.xml_chunks_buffer
+                ):
+                    last_xml_chunk = streaming_state.xml_chunks_buffer[-1]
+                    last_chunk_end_pos = streaming_state.accumulated_content.find(last_xml_chunk) + len(last_xml_chunk)
                     if last_chunk_end_pos > 0:
-                        accumulated_content = accumulated_content[:last_chunk_end_pos]
+                        streaming_state.accumulated_content = streaming_state.accumulated_content[:last_chunk_end_pos]
 
                 # ... (Extract complete_native_tool_calls logic) ...
                 if config.native_tool_calling:
-                    for idx, tc_buf in tool_calls_buffer.items():
+                    for idx, tc_buf in streaming_state.tool_calls_buffer.items():
                         # Only add tool calls up to the limit if a limit is set
                         if (
                             config.max_tool_calls > 0
-                            and len(complete_native_tool_calls) + xml_tool_call_count >= config.max_tool_calls
+                            and len(complete_native_tool_calls) + streaming_state.xml_tool_call_count
+                            >= config.max_tool_calls
                         ):
                             break
 
@@ -539,11 +566,11 @@ class ResponseProcessor:
 
                 message_data = {  # Dict to be saved in 'content'
                     "role": "assistant",
-                    "content": accumulated_content,
+                    "content": streaming_state.accumulated_content,
                     "tool_calls": complete_native_tool_calls or None,
                 }
 
-                last_assistant_message_object = await self.add_message(
+                streaming_state.last_assistant_message_object = await self.add_message(
                     thread_id=thread_id,
                     type="assistant",
                     content=message_data,
@@ -551,12 +578,12 @@ class ResponseProcessor:
                     metadata={"thread_run_id": thread_run_id},
                 )
 
-                if last_assistant_message_object:
+                if streaming_state.last_assistant_message_object:
                     # Yield the complete saved object, adding stream_status metadata just for yield
-                    yield_metadata = json.loads(last_assistant_message_object.get("metadata", "{}"))
+                    yield_metadata = json.loads(streaming_state.last_assistant_message_object.get("metadata", "{}"))
                     yield_metadata["stream_status"] = "complete"
                     yield {
-                        **last_assistant_message_object,
+                        **streaming_state.last_assistant_message_object,
                         "metadata": json.dumps(yield_metadata),
                     }
                 else:
@@ -595,20 +622,26 @@ class ResponseProcessor:
                 parsed_xml_data = []
                 if config.xml_tool_calling:
                     # Reparse remaining content just in case (should be empty if processed correctly)
-                    xml_chunks = self._extract_xml_chunks(current_xml_content)
-                    xml_chunks_buffer.extend(xml_chunks)
+                    xml_chunks = self._extract_xml_chunks(streaming_state.current_xml_content)
+                    streaming_state.xml_chunks_buffer.extend(xml_chunks)
                     # Process only chunks not already handled in the stream loop
                     remaining_limit = (
-                        config.max_tool_calls - tool_call_count if config.max_tool_calls > 0 else len(xml_chunks_buffer)
+                        config.max_tool_calls - streaming_state.tool_call_count
+                        if config.max_tool_calls > 0
+                        else len(streaming_state.xml_chunks_buffer)
                     )
-                    xml_chunks_to_process = xml_chunks_buffer[:remaining_limit]  # Ensure limit is respected
+                    xml_chunks_to_process = streaming_state.xml_chunks_buffer[
+                        :remaining_limit
+                    ]  # Ensure limit is respected
 
                     for chunk in xml_chunks_to_process:
                         parsed_result = self._parse_xml_tool_call(chunk)
                         if parsed_result:
                             tool_call, parsing_details = parsed_result
                             # Avoid adding if already processed during streaming
-                            if not any(exec["tool_call"] == tool_call for exec in pending_tool_executions):
+                            if not any(
+                                exec["tool_call"] == tool_call for exec in streaming_state.pending_tool_executions
+                            ):
                                 final_tool_calls_to_process.append(tool_call)
                                 parsed_xml_data.append(
                                     {
@@ -646,8 +679,8 @@ class ResponseProcessor:
                 if config.execute_on_stream and tool_results_buffer:
                     logger.info(f"Processing {len(tool_results_buffer)} buffered tool results")
                     for tool_call, result, tool_idx, context in tool_results_buffer:
-                        if last_assistant_message_object:
-                            context.assistant_message_id = last_assistant_message_object["message_id"]
+                        if streaming_state.last_assistant_message_object:
+                            context.assistant_message_id = streaming_state.last_assistant_message_object["message_id"]
                         tool_results_map[tool_idx] = (tool_call, result, context)
 
                 # Or execute now if not streamed
@@ -668,8 +701,8 @@ class ResponseProcessor:
                                 tc,
                                 current_tool_idx,
                                 (
-                                    last_assistant_message_object["message_id"]
-                                    if last_assistant_message_object
+                                    streaming_state.last_assistant_message_object["message_id"]
+                                    if streaming_state.last_assistant_message_object
                                     else None
                                 ),
                                 tool_data.get("parsing_details"),
@@ -686,15 +719,15 @@ class ResponseProcessor:
                     for tool_idx in sorted(tool_results_map.keys()):
                         tool_call, result, context = tool_results_map[tool_idx]
                         context.result = result
-                        if not context.assistant_message_id and last_assistant_message_object:
-                            context.assistant_message_id = last_assistant_message_object["message_id"]
+                        if not context.assistant_message_id and streaming_state.last_assistant_message_object:
+                            context.assistant_message_id = streaming_state.last_assistant_message_object["message_id"]
 
                         # Yield start status ONLY IF executing non-streamed (already yielded if streamed)
-                        if not config.execute_on_stream and tool_idx not in yielded_tool_indices:
+                        if not config.execute_on_stream and tool_idx not in streaming_state.yielded_tool_indices:
                             started_msg_obj = await self._yield_and_save_tool_started(context, thread_id, thread_run_id)
                             if started_msg_obj:
                                 yield started_msg_obj
-                            yielded_tool_indices.add(tool_idx)  # Mark status yielded
+                            streaming_state.yielded_tool_indices.add(tool_idx)  # Mark status yielded
 
                         # Save the tool result message to DB
                         saved_tool_result_object = await self._add_tool_result(  # Returns full object or None
@@ -719,7 +752,7 @@ class ResponseProcessor:
 
                         # Yield the saved tool result object
                         if saved_tool_result_object:
-                            tool_result_message_objects[tool_idx] = saved_tool_result_object
+                            streaming_state.tool_result_message_objects[tool_idx] = saved_tool_result_object
                             yield saved_tool_result_object
                         else:
                             logger.error(
@@ -728,13 +761,13 @@ class ResponseProcessor:
                             # Optionally yield error status for saving failure?
 
             # --- Calculate and Store Cost ---
-            if last_assistant_message_object:  # Only calculate if assistant message was saved
+            if streaming_state.last_assistant_message_object:  # Only calculate if assistant message was saved
                 try:
                     # Use accumulated_content for streaming cost calculation
                     final_cost = completion_cost(
                         model=llm_model,
                         messages=prompt_messages,  # Use the prompt messages provided
-                        completion=accumulated_content,
+                        completion=streaming_state.accumulated_content,
                     )
                     if final_cost is not None and final_cost > 0:
                         logger.info(f"Calculated final cost for stream: {final_cost}")
@@ -752,10 +785,10 @@ class ResponseProcessor:
                     logger.error(f"Error calculating final cost for stream: {str(e)}")
 
             # --- Final Finish Status ---
-            if finish_reason and finish_reason != "tool_limit_reached":
+            if streaming_state.finish_reason and streaming_state.finish_reason != "tool_limit_reached":
                 finish_content = {
                     "status_type": "finish",
-                    "finish_reason": finish_reason,
+                    "finish_reason": streaming_state.finish_reason,
                 }
                 finish_msg_obj = await self.add_message(
                     thread_id=thread_id,
@@ -1135,7 +1168,7 @@ class ResponseProcessor:
                     nesting_level -= 1
                     if nesting_level == 0:
                         content = xml_chunk[content_start:next_end]
-                        remaining = xml_chunk[next_end + len(end_tag):]
+                        remaining = xml_chunk[next_end + len(end_tag) :]
                         return content, remaining
                     else:
                         pos = next_end + len(end_tag)
