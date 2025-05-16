@@ -1,9 +1,9 @@
-import os
 import json
-from typing import Optional
+from turtle import mode
+from typing import Dict, Optional
 from mcp import ClientSession
+from supabase import AsyncClient
 
-# from agent.tools.message_tool import MessageTool
 from agent.tools.message_tool import MessageTool
 from agent.tools.sb_deploy_tool import SandboxDeployTool
 from agent.tools.sb_expose_tool import SandboxExposeTool
@@ -27,6 +27,184 @@ from agent.tools.sb_vision_tool import SandboxVisionTool
 load_dotenv()
 
 
+async def _initialize_tools(
+    thread_manager: ThreadManager, project_id: str, thread_id: str, mcp_session: Optional[ClientSession] = None
+):
+    await thread_manager.add_tool(SandboxShellTool, project_id=project_id, thread_manager=thread_manager)
+    await thread_manager.add_tool(SandboxFilesTool, project_id=project_id, thread_manager=thread_manager)
+    await thread_manager.add_tool(
+        SandboxBrowserTool,
+        project_id=project_id,
+        thread_id=thread_id,
+        thread_manager=thread_manager,
+    )
+    await thread_manager.add_tool(SandboxDeployTool, project_id=project_id, thread_manager=thread_manager)
+    await thread_manager.add_tool(SandboxExposeTool, project_id=project_id, thread_manager=thread_manager)
+    await thread_manager.add_tool(MessageTool)
+    await thread_manager.add_tool(SandboxWebSearchTool, project_id=project_id, thread_manager=thread_manager)
+    await thread_manager.add_tool(
+        SandboxVisionTool,
+        project_id=project_id,
+        thread_id=thread_id,
+        thread_manager=thread_manager,
+    )
+
+    if mcp_session is not None:
+        await thread_manager.add_tool(MCPTools, session=mcp_session)
+
+    if config.RAPID_API_KEY:
+        await thread_manager.add_tool(DataProvidersTool)
+
+
+async def _get_account_id(client: AsyncClient, thread_id: str) -> str:
+    account_id = await get_account_id_from_thread(client, thread_id)
+    if not account_id:
+        raise ValueError("Could not determine account ID for thread")
+    return account_id
+
+
+async def _ensure_sandbox_exists_for_project(client: AsyncClient, project_id: str, thread_id: str) -> None:
+    project = await client.table("projects").select("*").eq("project_id", project_id).execute()
+    if not project.data or len(project.data) == 0:
+        raise ValueError(f"Project {project_id} not found")
+
+    project_data = project.data[0]
+    sandbox_info = project_data.get("sandbox", {})
+    if not sandbox_info.get("id"):
+        raise ValueError(f"No sandbox found for project {project_id}")
+
+
+async def _get_latest_message(client: AsyncClient, thread_id: str) -> Optional[Dict]:
+    latest_message = (
+        await client.table("messages")
+        .select("*")
+        .eq("thread_id", thread_id)
+        .in_("type", ["assistant", "tool", "user"])
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    if latest_message.data and len(latest_message.data) > 0:
+        return latest_message.data[0]
+    return None
+
+
+async def _get_latest_image_context_message(client: AsyncClient, thread_id: str) -> Optional[Dict]:
+    latest_image_context_message = (
+        await client.table("messages")
+        .select("*")
+        .eq("thread_id", thread_id)
+        .eq("type", "image_context")
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    if latest_image_context_message.data and len(latest_image_context_message.data) > 0:
+        return latest_image_context_message.data[0]
+    return None
+
+
+async def _delete_message_from_database(client: AsyncClient, message_id: str) -> None:
+    await client.table("messages").delete().eq("message_id", message_id).execute()
+
+
+async def _extract_temporary_message(thread_id: str, client: AsyncClient) -> Optional[Dict]:
+    temporary_message = None
+    temp_message_content_list = []
+
+    latest_browser_state_msg = await _get_latest_browser_state_message(client=client, thread_id=thread_id)
+    if latest_browser_state_msg is not None:
+        try:
+            browser_content = json.loads(latest_browser_state_msg["content"])
+            screenshot_base64 = browser_content.get("screenshot_base64")
+            browser_state_text = browser_content.copy()
+            browser_state_text.pop("screenshot_base64", None)
+            browser_state_text.pop("screenshot_url", None)
+            browser_state_text.pop("screenshot_url_base64", None)
+
+            if browser_state_text:
+                temp_message_content_list.append(
+                    {
+                        "type": "text",
+                        "text": "The following is the current state of the browser:\n"
+                        f"{json.dumps(browser_state_text, indent=2)}",
+                    }
+                )
+            if screenshot_base64:
+                temp_message_content_list.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{screenshot_base64}",
+                        },
+                    }
+                )
+            else:
+                logger.warning("Browser state found but no screenshot base64 data.")
+
+            await _delete_message_from_database(client=client, message_id=latest_browser_state_msg["message_id"])
+        except Exception as e:
+            logger.error(f"Error parsing browser state: {e}")
+
+    latest_image_context_msg = await _get_latest_image_context_message(client=client, thread_id=thread_id)
+    if latest_image_context_msg is not None:
+        try:
+            image_context_content = json.loads(latest_image_context_msg["content"])
+            base64_image = image_context_content.get("base64")
+            mime_type = image_context_content.get("mime_type")
+            file_path = image_context_content.get("file_path", "unknown file")
+
+            if base64_image and mime_type:
+                temp_message_content_list.append(
+                    {
+                        "type": "text",
+                        "text": f"Here is the image you requested to see: '{file_path}'",
+                    }
+                )
+                temp_message_content_list.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:{mime_type};base64,{base64_image}",
+                        },
+                    }
+                )
+            else:
+                logger.warning(f"Image context found for '{file_path}' but missing base64 or mime_type.")
+
+            await _delete_message_from_database(client=client, message_id=latest_image_context_msg["message_id"])
+        except Exception as e:
+            logger.error(f"Error parsing image context: {e}")
+
+    if temp_message_content_list:
+        temporary_message = {"role": "user", "content": temp_message_content_list}
+    return temporary_message
+
+
+async def _get_latest_browser_state_message(client: AsyncClient, thread_id: str) -> Optional[Dict]:
+    latest_browser_state_message = (
+        await client.table("messages")
+        .select("*")
+        .eq("thread_id", thread_id)
+        .eq("type", "browser_state")
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    if latest_browser_state_message.data and len(latest_browser_state_message.data) > 0:
+        return latest_browser_state_message.data[0]
+    return None
+
+
+def _get_model_max_tokens(model_name: str) -> Optional[int]:
+    max_tokens = None
+    if "sonnet" in model_name.lower():
+        max_tokens = 64000
+    elif "gpt-4" in model_name.lower():
+        max_tokens = 4096
+    return max_tokens
+
+
 async def run_agent(
     thread_id: str,
     project_id: str,
@@ -44,204 +222,34 @@ async def run_agent(
     logger.info(f"🚀 Starting agent with model: {model_name}")
 
     thread_manager = ThreadManager()
-
     client = await thread_manager.db.client
-
-    # Get account ID from thread for billing checks
-    account_id = await get_account_id_from_thread(client, thread_id)
-    if not account_id:
-        raise ValueError("Could not determine account ID for thread")
-
-    # Get sandbox info from project
-    project = await client.table("projects").select("*").eq("project_id", project_id).execute()
-    if not project.data or len(project.data) == 0:
-        raise ValueError(f"Project {project_id} not found")
-
-    project_data = project.data[0]
-    sandbox_info = project_data.get("sandbox", {})
-    if not sandbox_info.get("id"):
-        raise ValueError(f"No sandbox found for project {project_id}")
-
-    # Initialize tools with project_id instead of sandbox object
-    # This ensures each tool independently verifies it's operating on the correct project
-    await thread_manager.add_tool(SandboxShellTool, project_id=project_id, thread_manager=thread_manager)
-    await thread_manager.add_tool(SandboxFilesTool, project_id=project_id, thread_manager=thread_manager)
-    await thread_manager.add_tool(
-        SandboxBrowserTool,
-        project_id=project_id,
-        thread_id=thread_id,
-        thread_manager=thread_manager,
-    )
-    await thread_manager.add_tool(SandboxDeployTool, project_id=project_id, thread_manager=thread_manager)
-    await thread_manager.add_tool(SandboxExposeTool, project_id=project_id, thread_manager=thread_manager)
-    await thread_manager.add_tool(
-        MessageTool
-    )  # we are just doing this via prompt as there is no need to call it as a tool
-    await thread_manager.add_tool(SandboxWebSearchTool, project_id=project_id, thread_manager=thread_manager)
-    await thread_manager.add_tool(
-        SandboxVisionTool,
-        project_id=project_id,
-        thread_id=thread_id,
-        thread_manager=thread_manager,
-    )
-
-    if mcp_session is not None:
-        await thread_manager.add_tool(MCPTools, session=mcp_session)
-
-    # Add data providers tool if RapidAPI key is available
-    if config.RAPID_API_KEY:
-        await thread_manager.add_tool(DataProvidersTool)
-
-    # Only include sample response if the model name does not contain "anthropic"
-    if "anthropic" not in model_name.lower():
-        sample_response_path = os.path.join(os.path.dirname(__file__), "sample_responses/1.txt")
-        with open(sample_response_path, "r") as file:
-            sample_response = file.read()
-
-        system_message = {
-            "role": "system",
-            "content": get_system_prompt()
-            + "\n\n <sample_assistant_response>"
-            + sample_response
-            + "</sample_assistant_response>",
-        }
-    else:
-        system_message = {"role": "system", "content": get_system_prompt()}
-
+    account_id = await _get_account_id(client=client, thread_id=thread_id)
+    system_message = {"role": "system", "content": get_system_prompt()}
     iteration_count = 0
     continue_execution = True
+
+    await _ensure_sandbox_exists_for_project(client=client, project_id=project_id, thread_id=thread_id)
+    await _initialize_tools(
+        thread_manager=thread_manager, project_id=project_id, thread_id=thread_id, mcp_session=mcp_session
+    )
 
     while continue_execution and iteration_count < max_iterations:
         iteration_count += 1
         logger.info(f"🔄 Running iteration {iteration_count} of {max_iterations}...")
 
         # Billing check on each iteration - still needed within the iterations
-        can_run, message, subscription = await check_billing_status(client, account_id)
+        can_run, message, _ = await check_billing_status(client, account_id)
         if not can_run:
             error_msg = f"Billing limit reached: {message}"
-            # Yield a special message to indicate billing limit reached
             yield {"type": "status", "status": "stopped", "message": error_msg}
             break
+
         # Check if last message is from assistant using direct Supabase query
-        latest_message = (
-            await client.table("messages")
-            .select("*")
-            .eq("thread_id", thread_id)
-            .in_("type", ["assistant", "tool", "user"])
-            .order("created_at", desc=True)
-            .limit(1)
-            .execute()
-        )
-        if latest_message.data and len(latest_message.data) > 0:
-            message_type = latest_message.data[0].get("type")
-            if message_type == "assistant":
-                logger.info("Last message was from assistant, stopping execution")
-                continue_execution = False
-                break
-
-        # ---- Temporary Message Handling (Browser State & Image Context) ----
-        temporary_message = None
-        temp_message_content_list = []  # List to hold text/image blocks
-
-        # Get the latest browser_state message
-        latest_browser_state_msg = (
-            await client.table("messages")
-            .select("*")
-            .eq("thread_id", thread_id)
-            .eq("type", "browser_state")
-            .order("created_at", desc=True)
-            .limit(1)
-            .execute()
-        )
-        if latest_browser_state_msg.data and len(latest_browser_state_msg.data) > 0:
-            try:
-                browser_content = json.loads(latest_browser_state_msg.data[0]["content"])
-                screenshot_base64 = browser_content.get("screenshot_base64")
-                # Create a copy of the browser state without screenshot
-                browser_state_text = browser_content.copy()
-                browser_state_text.pop("screenshot_base64", None)
-                browser_state_text.pop("screenshot_url", None)
-                browser_state_text.pop("screenshot_url_base64", None)
-
-                if browser_state_text:
-                    temp_message_content_list.append(
-                        {
-                            "type": "text",
-                            "text": "The following is the current state of the browser:\n"
-                            f"{json.dumps(browser_state_text, indent=2)}",
-                        }
-                    )
-                if screenshot_base64:
-                    temp_message_content_list.append(
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/jpeg;base64,{screenshot_base64}",
-                            },
-                        }
-                    )
-                else:
-                    logger.warning("Browser state found but no screenshot base64 data.")
-
-                await client.table("messages").delete().eq(
-                    "message_id", latest_browser_state_msg.data[0]["message_id"]
-                ).execute()
-            except Exception as e:
-                logger.error(f"Error parsing browser state: {e}")
-
-        # Get the latest image_context message (NEW)
-        latest_image_context_msg = (
-            await client.table("messages")
-            .select("*")
-            .eq("thread_id", thread_id)
-            .eq("type", "image_context")
-            .order("created_at", desc=True)
-            .limit(1)
-            .execute()
-        )
-        if latest_image_context_msg.data and len(latest_image_context_msg.data) > 0:
-            try:
-                image_context_content = json.loads(latest_image_context_msg.data[0]["content"])
-                base64_image = image_context_content.get("base64")
-                mime_type = image_context_content.get("mime_type")
-                file_path = image_context_content.get("file_path", "unknown file")
-
-                if base64_image and mime_type:
-                    temp_message_content_list.append(
-                        {
-                            "type": "text",
-                            "text": f"Here is the image you requested to see: '{file_path}'",
-                        }
-                    )
-                    temp_message_content_list.append(
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:{mime_type};base64,{base64_image}",
-                            },
-                        }
-                    )
-                else:
-                    logger.warning(f"Image context found for '{file_path}' but missing base64 or mime_type.")
-
-                await client.table("messages").delete().eq(
-                    "message_id", latest_image_context_msg.data[0]["message_id"]
-                ).execute()
-            except Exception as e:
-                logger.error(f"Error parsing image context: {e}")
-
-        # If we have any content, construct the temporary_message
-        if temp_message_content_list:
-            temporary_message = {"role": "user", "content": temp_message_content_list}
-            # logger.debug(f"Constructed temporary message with {len(temp_message_content_list)} content blocks.")
-        # ---- End Temporary Message Handling ----
-
-        # Set max_tokens based on model
-        max_tokens = None
-        if "sonnet" in model_name.lower():
-            max_tokens = 64000
-        elif "gpt-4" in model_name.lower():
-            max_tokens = 4096
+        latest_message = await _get_latest_message(client=client, thread_id=thread_id)
+        if latest_message is not None and latest_message.get("type") == "assistant":
+            logger.info("Last message was from assistant, stopping execution")
+            continue_execution = False
+            break
 
         try:
             # Make the LLM call and process the response
@@ -251,10 +259,10 @@ async def run_agent(
                 stream=stream,
                 llm_model=model_name,
                 llm_temperature=0,
-                llm_max_tokens=max_tokens,
+                llm_max_tokens=_get_model_max_tokens(model_name=model_name),
                 tool_choice="auto",
                 max_tool_calls=1,
-                temporary_message=temporary_message,
+                temporary_message=await _extract_temporary_message(thread_id=thread_id, client=client),
                 processor_config=ProcessorConfig(
                     xml_tool_calling=False,
                     native_tool_calling=True,
