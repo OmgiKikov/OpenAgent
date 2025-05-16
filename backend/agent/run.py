@@ -1,6 +1,5 @@
 import json
-from turtle import mode
-from typing import Dict, Optional
+from typing import Dict, Optional, List, Any, AsyncGenerator
 from mcp import ClientSession
 from supabase import AsyncClient
 
@@ -27,9 +26,10 @@ from agent.tools.sb_vision_tool import SandboxVisionTool
 load_dotenv()
 
 
-async def _initialize_tools(
+async def initialize_tools(
     thread_manager: ThreadManager, project_id: str, thread_id: str, mcp_session: Optional[ClientSession] = None
 ):
+    """Initialize all tools required for agent operation."""
     await thread_manager.add_tool(SandboxShellTool, project_id=project_id, thread_manager=thread_manager)
     await thread_manager.add_tool(SandboxFilesTool, project_id=project_id, thread_manager=thread_manager)
     await thread_manager.add_tool(
@@ -56,14 +56,16 @@ async def _initialize_tools(
         await thread_manager.add_tool(DataProvidersTool)
 
 
-async def _get_account_id(client: AsyncClient, thread_id: str) -> str:
+async def get_account_id_for_thread(client: AsyncClient, thread_id: str) -> str:
+    """Retrieve account ID associated with the given thread."""
     account_id = await get_account_id_from_thread(client, thread_id)
     if not account_id:
         raise ValueError("Could not determine account ID for thread")
     return account_id
 
 
-async def _ensure_sandbox_exists_for_project(client: AsyncClient, project_id: str, thread_id: str) -> None:
+async def validate_sandbox_for_project(client: AsyncClient, project_id: str) -> None:
+    """Ensure sandbox exists for the specified project."""
     project = await client.table("projects").select("*").eq("project_id", project_id).execute()
     if not project.data or len(project.data) == 0:
         raise ValueError(f"Project {project_id} not found")
@@ -74,7 +76,8 @@ async def _ensure_sandbox_exists_for_project(client: AsyncClient, project_id: st
         raise ValueError(f"No sandbox found for project {project_id}")
 
 
-async def _get_latest_message(client: AsyncClient, thread_id: str) -> Optional[Dict]:
+async def retrieve_latest_message(client: AsyncClient, thread_id: str) -> Optional[Dict]:
+    """Retrieve the most recent message in the thread."""
     latest_message = (
         await client.table("messages")
         .select("*")
@@ -89,7 +92,8 @@ async def _get_latest_message(client: AsyncClient, thread_id: str) -> Optional[D
     return None
 
 
-async def _get_latest_image_context_message(client: AsyncClient, thread_id: str) -> Optional[Dict]:
+async def retrieve_latest_image_context_message(client: AsyncClient, thread_id: str) -> Optional[Dict]:
+    """Retrieve the most recent image context message."""
     latest_image_context_message = (
         await client.table("messages")
         .select("*")
@@ -104,84 +108,13 @@ async def _get_latest_image_context_message(client: AsyncClient, thread_id: str)
     return None
 
 
-async def _delete_message_from_database(client: AsyncClient, message_id: str) -> None:
+async def delete_message_from_db(client: AsyncClient, message_id: str) -> None:
+    """Delete a message from the database by ID."""
     await client.table("messages").delete().eq("message_id", message_id).execute()
 
 
-async def _extract_temporary_message(thread_id: str, client: AsyncClient) -> Optional[Dict]:
-    temporary_message = None
-    temp_message_content_list = []
-
-    latest_browser_state_msg = await _get_latest_browser_state_message(client=client, thread_id=thread_id)
-    if latest_browser_state_msg is not None:
-        try:
-            browser_content = json.loads(latest_browser_state_msg["content"])
-            screenshot_base64 = browser_content.get("screenshot_base64")
-            browser_state_text = browser_content.copy()
-            browser_state_text.pop("screenshot_base64", None)
-            browser_state_text.pop("screenshot_url", None)
-            browser_state_text.pop("screenshot_url_base64", None)
-
-            if browser_state_text:
-                temp_message_content_list.append(
-                    {
-                        "type": "text",
-                        "text": "The following is the current state of the browser:\n"
-                        f"{json.dumps(browser_state_text, indent=2)}",
-                    }
-                )
-            if screenshot_base64:
-                temp_message_content_list.append(
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/jpeg;base64,{screenshot_base64}",
-                        },
-                    }
-                )
-            else:
-                logger.warning("Browser state found but no screenshot base64 data.")
-
-            await _delete_message_from_database(client=client, message_id=latest_browser_state_msg["message_id"])
-        except Exception as e:
-            logger.error(f"Error parsing browser state: {e}")
-
-    latest_image_context_msg = await _get_latest_image_context_message(client=client, thread_id=thread_id)
-    if latest_image_context_msg is not None:
-        try:
-            image_context_content = json.loads(latest_image_context_msg["content"])
-            base64_image = image_context_content.get("base64")
-            mime_type = image_context_content.get("mime_type")
-            file_path = image_context_content.get("file_path", "unknown file")
-
-            if base64_image and mime_type:
-                temp_message_content_list.append(
-                    {
-                        "type": "text",
-                        "text": f"Here is the image you requested to see: '{file_path}'",
-                    }
-                )
-                temp_message_content_list.append(
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:{mime_type};base64,{base64_image}",
-                        },
-                    }
-                )
-            else:
-                logger.warning(f"Image context found for '{file_path}' but missing base64 or mime_type.")
-
-            await _delete_message_from_database(client=client, message_id=latest_image_context_msg["message_id"])
-        except Exception as e:
-            logger.error(f"Error parsing image context: {e}")
-
-    if temp_message_content_list:
-        temporary_message = {"role": "user", "content": temp_message_content_list}
-    return temporary_message
-
-
-async def _get_latest_browser_state_message(client: AsyncClient, thread_id: str) -> Optional[Dict]:
+async def retrieve_latest_browser_state_message(client: AsyncClient, thread_id: str) -> Optional[Dict]:
+    """Retrieve the most recent browser state message."""
     latest_browser_state_message = (
         await client.table("messages")
         .select("*")
@@ -196,13 +129,261 @@ async def _get_latest_browser_state_message(client: AsyncClient, thread_id: str)
     return None
 
 
-def _get_model_max_tokens(model_name: str) -> Optional[int]:
-    max_tokens = None
+def get_model_token_limit(model_name: str) -> Optional[int]:
+    """Determine the token limit based on model name."""
     if "sonnet" in model_name.lower():
-        max_tokens = 64000
+        return 64000
     elif "gpt-4" in model_name.lower():
-        max_tokens = 4096
-    return max_tokens
+        return 4096
+    return None
+
+
+async def extract_browser_state_message(client: AsyncClient, thread_id: str) -> List[Dict]:
+    """Extract browser state message content."""
+    content_items = []
+    latest_browser_state_msg = await retrieve_latest_browser_state_message(client=client, thread_id=thread_id)
+
+    if latest_browser_state_msg is None:
+        return content_items
+
+    try:
+        browser_content = json.loads(latest_browser_state_msg["content"])
+        screenshot_base64 = browser_content.get("screenshot_base64")
+        browser_state_text = browser_content.copy()
+        browser_state_text.pop("screenshot_base64", None)
+        browser_state_text.pop("screenshot_url", None)
+        browser_state_text.pop("screenshot_url_base64", None)
+
+        if browser_state_text:
+            content_items.append(
+                {
+                    "type": "text",
+                    "text": "The following is the current state of the browser:\n"
+                    f"{json.dumps(browser_state_text, indent=2)}",
+                }
+            )
+        if screenshot_base64:
+            content_items.append(
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/jpeg;base64,{screenshot_base64}",
+                    },
+                }
+            )
+        else:
+            logger.warning("Browser state found but no screenshot base64 data.")
+
+        await delete_message_from_db(client=client, message_id=latest_browser_state_msg["message_id"])
+    except Exception as e:
+        logger.error(f"Error parsing browser state: {e}")
+
+    return content_items
+
+
+async def extract_image_context_message(client: AsyncClient, thread_id: str) -> List[Dict]:
+    """Extract image context message content."""
+    content_items = []
+    latest_image_context_msg = await retrieve_latest_image_context_message(client=client, thread_id=thread_id)
+
+    if latest_image_context_msg is None:
+        return content_items
+
+    try:
+        image_context_content = json.loads(latest_image_context_msg["content"])
+        base64_image = image_context_content.get("base64")
+        mime_type = image_context_content.get("mime_type")
+        file_path = image_context_content.get("file_path", "unknown file")
+
+        if base64_image and mime_type:
+            content_items.append(
+                {
+                    "type": "text",
+                    "text": f"Here is the image you requested to see: '{file_path}'",
+                }
+            )
+            content_items.append(
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:{mime_type};base64,{base64_image}",
+                    },
+                }
+            )
+        else:
+            logger.warning(f"Image context found for '{file_path}' but missing base64 or mime_type.")
+
+        await delete_message_from_db(client=client, message_id=latest_image_context_msg["message_id"])
+    except Exception as e:
+        logger.error(f"Error parsing image context: {e}")
+
+    return content_items
+
+
+async def extract_temporary_message(thread_id: str, client: AsyncClient) -> Optional[Dict]:
+    """Extract temporary messages from browser state and image context."""
+    temp_message_content_list = []
+
+    # Extract browser state content
+    browser_content_items = await extract_browser_state_message(client=client, thread_id=thread_id)
+    temp_message_content_list.extend(browser_content_items)
+
+    # Extract image context content
+    image_content_items = await extract_image_context_message(client=client, thread_id=thread_id)
+    temp_message_content_list.extend(image_content_items)
+
+    if temp_message_content_list:
+        return {"role": "user", "content": temp_message_content_list}
+
+    return None
+
+
+async def check_billing_status_for_account(client: AsyncClient, account_id: str) -> Optional[Dict[str, Any]]:
+    """Check billing status for the specified account."""
+    can_run, message, _ = await check_billing_status(client, account_id)
+    if not can_run:
+        error_msg = f"Billing limit reached: {message}"
+        return {"type": "status", "status": "stopped", "message": error_msg}
+    return None
+
+
+async def configure_thread_manager(
+    thread_id: str,
+    project_id: str,
+    mcp_session: Optional[ClientSession] = None
+) -> ThreadManager:
+    """Configure and prepare the thread manager with all required tools."""
+    thread_manager = ThreadManager()
+
+    await initialize_tools(
+        thread_manager=thread_manager,
+        project_id=project_id,
+        thread_id=thread_id,
+        mcp_session=mcp_session
+    )
+
+    return thread_manager
+
+
+async def detect_xml_tool_usage(assistant_text: str) -> Optional[str]:
+    """Detect if an XML tool was used in the assistant's response."""
+    if "</ask>" in assistant_text:
+        return "ask"
+    elif "</complete>" in assistant_text:
+        return "complete"
+    elif "</web-browser-takeover>" in assistant_text:
+        return "web-browser-takeover"
+    return None
+
+
+async def run_agent_iteration(
+    thread_manager: ThreadManager,
+    thread_id: str,
+    account_id: str,
+    system_message: Dict,
+    model_name: str,
+    stream: bool,
+    native_max_auto_continues: int,
+    enable_thinking: Optional[bool],
+    reasoning_effort: Optional[str],
+    enable_context_manager: bool,
+) -> AsyncGenerator[Dict[str, Any], None]:
+    """Run a single iteration of the agent and yield response chunks."""
+    # Check billing status
+    client = await thread_manager.db.client
+    billing_status = await check_billing_status_for_account(client=client, account_id=account_id)
+    if billing_status:
+        yield billing_status
+        return
+
+    try:
+        # Get temporary message if available
+        temporary_message = await extract_temporary_message(thread_id=thread_id, client=client)
+
+        # Make the LLM call
+        response = await thread_manager.run_thread(
+            thread_id=thread_id,
+            system_prompt=system_message,
+            stream=stream,
+            llm_model=model_name,
+            llm_temperature=0,
+            llm_max_tokens=get_model_token_limit(model_name),
+            tool_choice="auto",
+            max_tool_calls=1,
+            temporary_message=temporary_message,
+            processor_config=ProcessorConfig(
+                xml_tool_calling=False,
+                native_tool_calling=True,
+                execute_tools=True,
+                execute_on_stream=True,
+                tool_execution_strategy="parallel",
+                xml_adding_strategy="user_message",
+            ),
+            native_max_auto_continues=native_max_auto_continues,
+            include_xml_examples=False,
+            enable_thinking=enable_thinking,
+            reasoning_effort=reasoning_effort,
+            enable_context_manager=enable_context_manager,
+        )
+
+        if isinstance(response, dict) and "status" in response and response["status"] == "error":
+            logger.error(f"Error response from run_thread: {response.get('message', 'Unknown error')}")
+            yield response
+            return
+
+        # Track state during iteration
+        error_detected = False
+        detected_tool = None
+
+        # Process response chunks
+        try:
+            # Convert dict response to AsyncGenerator if needed
+            if isinstance(response, dict):
+                async def dict_to_generator():
+                    yield response
+                response_gen = dict_to_generator()
+            else:
+                response_gen = response
+
+            async for chunk in response_gen:
+                # Check for error chunks
+                if isinstance(chunk, dict) and chunk.get("type") == "status" and chunk.get("status") == "error":
+                    error_detected = True
+
+                # Check for XML tool usage in assistant content chunks
+                if chunk.get("type") == "assistant" and "content" in chunk:
+                    try:
+                        content = chunk.get("content", "{}")
+                        content_data = content if isinstance(content, dict) else json.loads(content)
+                        assistant_text = content_data.get("content", "")
+
+                        if isinstance(assistant_text, str):
+                            tool = await detect_xml_tool_usage(assistant_text)
+                            if tool:
+                                detected_tool = tool
+                                logger.info(f"Agent used XML tool: {tool}")
+                    except Exception as e:
+                        logger.error(f"Error processing chunk: {e}")
+
+                # Pass the chunk back to caller
+                yield chunk
+
+            # Send status information as the final chunk
+            if error_detected:
+                logger.info("Error detected in response")
+                yield {"type": "status", "status": "error_detected"}
+            elif detected_tool in ["ask", "complete", "web-browser-takeover"]:
+                logger.info(f"Agent decided to stop with tool: {detected_tool}")
+                yield {"type": "status", "status": "tool_detected", "tool": detected_tool}
+        except Exception as e:
+            error_msg = f"Error during response streaming: {str(e)}"
+            logger.error(f"Error: {error_msg}")
+            yield {"type": "status", "status": "error", "message": error_msg}
+
+    except Exception as e:
+        error_msg = f"Error running thread: {str(e)}"
+        logger.error(f"Error: {error_msg}")
+        yield {"type": "status", "status": "error", "message": error_msg}
 
 
 async def run_agent(
@@ -217,143 +398,57 @@ async def run_agent(
     reasoning_effort: Optional[str] = "low",
     enable_context_manager: bool = True,
     mcp_session: Optional[ClientSession] = None,
-):
+) -> AsyncGenerator[Dict[str, Any], None]:
     """Run the development agent with specified configuration."""
     logger.info(f"🚀 Starting agent with model: {model_name}")
 
-    thread_manager = ThreadManager()
+    # Initialize thread manager and configuration
+    thread_manager = await configure_thread_manager(
+        thread_id=thread_id,
+        project_id=project_id,
+        mcp_session=mcp_session
+    )
     client = await thread_manager.db.client
-    account_id = await _get_account_id(client=client, thread_id=thread_id)
+    account_id = await get_account_id_for_thread(client=client, thread_id=thread_id)
     system_message = {"role": "system", "content": get_system_prompt()}
+
+    await validate_sandbox_for_project(client=client, project_id=project_id)
+
+    # Run agent iterations
     iteration_count = 0
     continue_execution = True
-
-    await _ensure_sandbox_exists_for_project(client=client, project_id=project_id, thread_id=thread_id)
-    await _initialize_tools(
-        thread_manager=thread_manager, project_id=project_id, thread_id=thread_id, mcp_session=mcp_session
-    )
 
     while continue_execution and iteration_count < max_iterations:
         iteration_count += 1
         logger.info(f"🔄 Running iteration {iteration_count} of {max_iterations}...")
 
-        # Billing check on each iteration - still needed within the iterations
-        can_run, message, _ = await check_billing_status(client, account_id)
-        if not can_run:
-            error_msg = f"Billing limit reached: {message}"
-            yield {"type": "status", "status": "stopped", "message": error_msg}
-            break
-
-        # Check if last message is from assistant using direct Supabase query
-        latest_message = await _get_latest_message(client=client, thread_id=thread_id)
+        # Check if last message is from assistant before running iteration
+        latest_message = await retrieve_latest_message(client=client, thread_id=thread_id)
         if latest_message is not None and latest_message.get("type") == "assistant":
             logger.info("Last message was from assistant, stopping execution")
-            continue_execution = False
             break
 
-        try:
-            # Make the LLM call and process the response
-            response = await thread_manager.run_thread(
-                thread_id=thread_id,
-                system_prompt=system_message,
-                stream=stream,
-                llm_model=model_name,
-                llm_temperature=0,
-                llm_max_tokens=_get_model_max_tokens(model_name=model_name),
-                tool_choice="auto",
-                max_tool_calls=1,
-                temporary_message=await _extract_temporary_message(thread_id=thread_id, client=client),
-                processor_config=ProcessorConfig(
-                    xml_tool_calling=False,
-                    native_tool_calling=True,
-                    execute_tools=True,
-                    execute_on_stream=True,
-                    tool_execution_strategy="parallel",
-                    xml_adding_strategy="user_message",
-                ),
-                native_max_auto_continues=native_max_auto_continues,
-                include_xml_examples=False,
-                enable_thinking=enable_thinking,
-                reasoning_effort=reasoning_effort,
-                enable_context_manager=enable_context_manager,
-            )
+        async for chunk in run_agent_iteration(
+            thread_manager=thread_manager,
+            thread_id=thread_id,
+            account_id=account_id,
+            system_message=system_message,
+            model_name=model_name,
+            stream=stream,
+            native_max_auto_continues=native_max_auto_continues,
+            enable_thinking=enable_thinking,
+            reasoning_effort=reasoning_effort,
+            enable_context_manager=enable_context_manager,
+        ):
+            yield chunk
 
-            if isinstance(response, dict) and "status" in response and response["status"] == "error":
-                logger.error(f"Error response from run_thread: {response.get('message', 'Unknown error')}")
-                yield response
-                break
-
-            # Track if we see ask, complete, or web-browser-takeover tool calls
-            last_tool_call = None
-
-            # Process the response
-            error_detected = False
-            try:
-                async for chunk in response:
-                    # If we receive an error chunk, we should stop after this iteration
-                    if isinstance(chunk, dict) and chunk.get("type") == "status" and chunk.get("status") == "error":
-                        logger.error(f"Error chunk detected: {chunk.get('message', 'Unknown error')}")
-                        error_detected = True
-                        yield chunk  # Forward the error chunk
-                        continue  # Continue processing other chunks but don't break yet
-
-                    # Check for XML versions like <ask>, <complete>, or <web-browser-takeover>
-                    # in assistant content chunks
-                    if chunk.get("type") == "assistant" and "content" in chunk:
-                        try:
-                            # The content field might be a JSON string or object
-                            content = chunk.get("content", "{}")
-                            if isinstance(content, str):
-                                assistant_content_json = json.loads(content)
-                            else:
-                                assistant_content_json = content
-
-                            # The actual text content is nested within
-                            assistant_text = assistant_content_json.get("content", "")
-                            if isinstance(assistant_text, str):  # Ensure it's a string
-                                # Check for the closing tags as they signal the end of the tool usage
-                                if (
-                                    "</ask>" in assistant_text
-                                    or "</complete>" in assistant_text
-                                    or "</web-browser-takeover>" in assistant_text
-                                ):
-                                    if "</ask>" in assistant_text:
-                                        xml_tool = "ask"
-                                    elif "</complete>" in assistant_text:
-                                        xml_tool = "complete"
-                                    elif "</web-browser-takeover>" in assistant_text:
-                                        xml_tool = "web-browser-takeover"
-
-                                    last_tool_call = xml_tool
-                                    logger.info(f"Agent used XML tool: {xml_tool}")
-                        except json.JSONDecodeError:
-                            # Handle cases where content might not be valid JSON
-                            logger.warning(f"Warning: Could not parse assistant content JSON: {chunk.get('content')}")
-                        except Exception as e:
-                            logger.error(f"Error processing assistant chunk: {e}")
-
-                    yield chunk
-
-                # Check if we should stop based on the last tool call or error
-                if error_detected:
-                    logger.info("Stopping due to error detected in response")
-                    break
-
-                if last_tool_call in ["ask", "complete", "web-browser-takeover"]:
-                    logger.info(f"Agent decided to stop with tool: {last_tool_call}")
+            # Check for status chunks that might indicate stopping
+            if isinstance(chunk, dict) and chunk.get("type") == "status":
+                status = chunk.get("status")
+                if status in ["error", "stopped"]:
+                    # Stop all iterations on errors
                     continue_execution = False
-            except Exception as e:
-                # Just log the error and re-raise to stop all iterations
-                error_msg = f"Error during response streaming: {str(e)}"
-                logger.error(f"Error: {error_msg}")
-                yield {"type": "status", "status": "error", "message": error_msg}
-                # Stop execution immediately on any error
-                break
-
-        except Exception as e:
-            # Just log the error and re-raise to stop all iterations
-            error_msg = f"Error running thread: {str(e)}"
-            logger.error(f"Error: {error_msg}")
-            yield {"type": "status", "status": "error", "message": error_msg}
-            # Stop execution immediately on any error
-            break
+                    break
+                elif status in ["error_detected", "tool_detected"]:
+                    # Stop further iterations but don't break current one
+                    continue_execution = False
