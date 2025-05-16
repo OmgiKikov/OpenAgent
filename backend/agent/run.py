@@ -248,18 +248,13 @@ async def check_billing_status_for_account(client: AsyncClient, account_id: str)
 
 
 async def configure_thread_manager(
-    thread_id: str,
-    project_id: str,
-    mcp_session: Optional[ClientSession] = None
+    thread_id: str, project_id: str, mcp_session: Optional[ClientSession] = None
 ) -> ThreadManager:
     """Configure and prepare the thread manager with all required tools."""
     thread_manager = ThreadManager()
 
     await initialize_tools(
-        thread_manager=thread_manager,
-        project_id=project_id,
-        thread_id=thread_id,
-        mcp_session=mcp_session
+        thread_manager=thread_manager, project_id=project_id, thread_id=thread_id, mcp_session=mcp_session
     )
 
     return thread_manager
@@ -339,8 +334,10 @@ async def run_agent_iteration(
         try:
             # Convert dict response to AsyncGenerator if needed
             if isinstance(response, dict):
+
                 async def dict_to_generator():
                     yield response
+
                 response_gen = dict_to_generator()
             else:
                 response_gen = response
@@ -403,11 +400,7 @@ async def run_agent(
     logger.info(f"🚀 Starting agent with model: {model_name}")
 
     # Initialize thread manager and configuration
-    thread_manager = await configure_thread_manager(
-        thread_id=thread_id,
-        project_id=project_id,
-        mcp_session=mcp_session
-    )
+    thread_manager = await configure_thread_manager(thread_id=thread_id, project_id=project_id, mcp_session=mcp_session)
     client = await thread_manager.db.client
     account_id = await get_account_id_for_thread(client=client, thread_id=thread_id)
     system_message = {"role": "system", "content": get_system_prompt()}
