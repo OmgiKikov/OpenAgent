@@ -104,6 +104,15 @@ class StreamingState:
     has_printed_thinking_prefix: bool = False
 
 
+def filter_messages(func):
+    async def wrapper(self, *args, **kwargs):
+        async for msg in func(self, *args, **kwargs):
+            if msg:
+                yield msg
+
+    return wrapper
+
+
 class ResponseProcessor:
     """Processes LLM responses, extracting and executing tool calls."""
 
@@ -145,22 +154,15 @@ class ResponseProcessor:
 
     async def _create_initial_status_messages(
         self, thread_id: str, thread_run_id: str
-    ) -> AsyncGenerator[Dict[str, Any], None]:
-        start_msg_obj = await self._create_thread_run_start_status_message(
+    ) -> AsyncGenerator[Optional[Dict[str, Any]], None]:
+        yield await self._create_thread_run_start_status_message(thread_id=thread_id, thread_run_id=thread_run_id)
+        yield await self._create_assistant_response_start_status_message(
             thread_id=thread_id, thread_run_id=thread_run_id
         )
-        if start_msg_obj:
-            yield start_msg_obj
-
-        assist_start_msg_obj = await self._create_assistant_response_start_status_message(
-            thread_id=thread_id, thread_run_id=thread_run_id
-        )
-        if assist_start_msg_obj:
-            yield assist_start_msg_obj
 
     async def _process_chunk_and_create_messages(
         self, chunk: Any, streaming_state: StreamingState, config: ProcessorConfig, thread_id: str, thread_run_id: str
-    ) -> AsyncGenerator[Dict[str, Any], None]:
+    ) -> AsyncGenerator[Optional[Dict[str, Any]], None]:
         if (
             hasattr(chunk, "choices")
             and chunk.choices
@@ -239,11 +241,7 @@ class ResponseProcessor:
 
                             if config.execute_tools and config.execute_on_stream:
                                 # Save and Yield tool_started status
-                                started_msg_obj = await self._yield_and_save_tool_started(
-                                    context, thread_id, thread_run_id
-                                )
-                                if started_msg_obj:
-                                    yield started_msg_obj
+                                yield await self._yield_and_save_tool_started(context, thread_id, thread_run_id)
                                 streaming_state.yielded_tool_indices.add(
                                     streaming_state.tool_index
                                 )  # Mark status as yielded
@@ -376,9 +374,7 @@ class ResponseProcessor:
                         )
 
                         # Save and Yield tool_started status
-                        started_msg_obj = await self._yield_and_save_tool_started(context, thread_id, thread_run_id)
-                        if started_msg_obj:
-                            yield started_msg_obj
+                        yield await self._yield_and_save_tool_started(context, thread_id, thread_run_id)
                         streaming_state.yielded_tool_indices.add(streaming_state.tool_index)  # Mark status as yielded
 
                         execution_task = asyncio.create_task(self._execute_tool(tool_call_data))
@@ -392,6 +388,7 @@ class ResponseProcessor:
                         )
                         streaming_state.tool_index += 1
 
+    @filter_messages
     async def process_streaming_response(
         self,
         llm_response: AsyncGenerator,
@@ -399,7 +396,7 @@ class ResponseProcessor:
         prompt_messages: List[Dict[str, Any]],
         llm_model: str,
         config: ProcessorConfig = ProcessorConfig(),
-    ) -> AsyncGenerator[Dict[str, Any], None]:
+    ) -> AsyncGenerator[Optional[Dict[str, Any]], None]:
         """Process a streaming LLM response, handling tool calls and execution.
 
         Args:
@@ -468,9 +465,7 @@ class ResponseProcessor:
                             logger.error(f"Error getting result for pending tool execution {tool_idx}: {str(e)}")
                             context.error = e
                             # Save and Yield tool error status message (even if started was yielded)
-                            error_msg_obj = await self._yield_and_save_tool_error(context, thread_id, thread_run_id)
-                            if error_msg_obj:
-                                yield error_msg_obj
+                            yield await self._yield_and_save_tool_error(context, thread_id, thread_run_id)
                         continue  # Skip further status yielding for this tool index
 
                     # If status wasn't yielded before (shouldn't happen with current logic), yield it now
@@ -480,11 +475,7 @@ class ResponseProcessor:
                             context.result = result
                             tool_results_buffer.append((execution["tool_call"], result, tool_idx, context))
                             # Save and Yield tool completed/failed status
-                            completed_msg_obj = await self._yield_and_save_tool_completed(
-                                context, None, thread_id, thread_run_id
-                            )
-                            if completed_msg_obj:
-                                yield completed_msg_obj
+                            yield await self._yield_and_save_tool_completed(context, None, thread_id, thread_run_id)
                             streaming_state.yielded_tool_indices.add(tool_idx)
                     except Exception as e:
                         logger.error(
@@ -492,9 +483,7 @@ class ResponseProcessor:
                         )
                         context.error = e
                         # Save and Yield tool error status
-                        error_msg_obj = await self._yield_and_save_tool_error(context, thread_id, thread_run_id)
-                        if error_msg_obj:
-                            yield error_msg_obj
+                        yield await self._yield_and_save_tool_error(context, thread_id, thread_run_id)
                         streaming_state.yielded_tool_indices.add(tool_idx)
 
             # Save and yield finish status if limit was reached
@@ -503,15 +492,13 @@ class ResponseProcessor:
                     "status_type": "finish",
                     "finish_reason": streaming_state.finish_reason,
                 }
-                finish_msg_obj = await self.add_message(
+                yield await self.add_message(
                     thread_id=thread_id,
                     type="status",
                     content=finish_content,
                     is_llm_message=False,
                     metadata={"thread_run_id": thread_run_id},
                 )
-                if finish_msg_obj:
-                    yield finish_msg_obj
                 logger.info(
                     f"Stream finished with reason: {streaming_state.finish_reason} "
                     f"after {streaming_state.tool_call_count} total tool calls"
@@ -589,15 +576,13 @@ class ResponseProcessor:
                         "status_type": "error",
                         "message": "Failed to save final assistant message",
                     }
-                    err_msg_obj = await self.add_message(
+                    yield await self.add_message(
                         thread_id=thread_id,
                         type="status",
                         content=err_content,
                         is_llm_message=False,
                         metadata={"thread_run_id": thread_run_id},
                     )
-                    if err_msg_obj:
-                        yield err_msg_obj
 
             # --- Process All Tool Results Now ---
             if config.execute_tools:
@@ -719,9 +704,7 @@ class ResponseProcessor:
 
                         # Yield start status ONLY IF executing non-streamed (already yielded if streamed)
                         if not config.execute_on_stream and tool_idx not in streaming_state.yielded_tool_indices:
-                            started_msg_obj = await self._yield_and_save_tool_started(context, thread_id, thread_run_id)
-                            if started_msg_obj:
-                                yield started_msg_obj
+                            yield await self._yield_and_save_tool_started(context, thread_id, thread_run_id)
                             streaming_state.yielded_tool_indices.add(tool_idx)  # Mark status yielded
 
                         # Save the tool result message to DB
@@ -735,14 +718,12 @@ class ResponseProcessor:
                         )
 
                         # Yield completed/failed status (linked to saved result ID if available)
-                        completed_msg_obj = await self._yield_and_save_tool_completed(
+                        yield await self._yield_and_save_tool_completed(
                             context,
                             (saved_tool_result_object["message_id"] if saved_tool_result_object else None),
                             thread_id,
                             thread_run_id,
                         )
-                        if completed_msg_obj:
-                            yield completed_msg_obj
                         # Don't add to yielded_tool_indices here, completion status is separate yield
 
                         # Yield the saved tool result object
@@ -785,29 +766,25 @@ class ResponseProcessor:
                     "status_type": "finish",
                     "finish_reason": streaming_state.finish_reason,
                 }
-                finish_msg_obj = await self.add_message(
+                yield await self.add_message(
                     thread_id=thread_id,
                     type="status",
                     content=finish_content,
                     is_llm_message=False,
                     metadata={"thread_run_id": thread_run_id},
                 )
-                if finish_msg_obj:
-                    yield finish_msg_obj
 
         except Exception as e:
             logger.error(f"Error processing stream: {str(e)}", exc_info=True)
             # Save and yield error status message
             err_content = {"role": "system", "status_type": "error", "message": str(e)}
-            err_msg_obj = await self.add_message(
+            yield await self.add_message(
                 thread_id=thread_id,
                 type="status",
                 content=err_content,
                 is_llm_message=False,
                 metadata={"thread_run_id": (thread_run_id if "thread_run_id" in locals() else None)},
             )
-            if err_msg_obj:
-                yield err_msg_obj  # Yield the saved error message
 
             # Re-raise the same exception (not a new one) to ensure proper error propagation
             logger.critical(f"Re-raising error to stop further processing: {str(e)}")
@@ -817,15 +794,13 @@ class ResponseProcessor:
             # Save and Yield the final thread_run_end status
             try:
                 end_content = {"status_type": "thread_run_end"}
-                end_msg_obj = await self.add_message(
+                yield await self.add_message(
                     thread_id=thread_id,
                     type="status",
                     content=end_content,
                     is_llm_message=False,
                     metadata={"thread_run_id": (thread_run_id if "thread_run_id" in locals() else None)},
                 )
-                if end_msg_obj:
-                    yield end_msg_obj
             except Exception as final_e:
                 logger.error(f"Error in finally block: {str(final_e)}", exc_info=True)
 
