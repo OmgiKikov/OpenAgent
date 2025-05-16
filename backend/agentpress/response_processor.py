@@ -458,52 +458,17 @@ class ResponseProcessor:
                 logger.info(
                     f"Waiting for {len(streaming_state.pending_tool_executions)} pending streamed tool executions"
                 )
-                # ... (asyncio.wait logic) ...
                 pending_tasks = [execution["task"] for execution in streaming_state.pending_tool_executions]
                 done, _ = await asyncio.wait(pending_tasks)
 
                 for execution in streaming_state.pending_tool_executions:
-                    tool_idx = execution.get("tool_index", -1)
-                    context = execution["context"]
-                    # Check if status was already yielded during stream run
-                    if tool_idx in streaming_state.yielded_tool_indices:
-                        logger.debug(f"Status for tool index {tool_idx} already yielded.")
-                        # Still need to process the result for the buffer
-                        try:
-                            if execution["task"].done():
-                                result = execution["task"].result()
-                                context.result = result
-                                streaming_state.tool_results_buffer.append(
-                                    (execution["tool_call"], result, tool_idx, context)
-                                )
-                            else:  # Should not happen with asyncio.wait
-                                logger.warning(f"Task for tool index {tool_idx} not done after wait.")
-                        except Exception as e:
-                            logger.error(f"Error getting result for pending tool execution {tool_idx}: {str(e)}")
-                            context.error = e
-                            # Save and Yield tool error status message (even if started was yielded)
-                            yield await self._yield_and_save_tool_error(context, thread_id, thread_run_id)
-                        continue  # Skip further status yielding for this tool index
-
-                    # If status wasn't yielded before (shouldn't happen with current logic), yield it now
-                    try:
-                        if execution["task"].done():
-                            result = execution["task"].result()
-                            context.result = result
-                            streaming_state.tool_results_buffer.append(
-                                (execution["tool_call"], result, tool_idx, context)
-                            )
-                            # Save and Yield tool completed/failed status
-                            yield await self._yield_and_save_tool_completed(context, None, thread_id, thread_run_id)
-                            streaming_state.yielded_tool_indices.add(tool_idx)
-                    except Exception as e:
-                        logger.error(
-                            f"Error getting result/yielding status for pending tool execution {tool_idx}: {str(e)}"
-                        )
-                        context.error = e
-                        # Save and Yield tool error status
-                        yield await self._yield_and_save_tool_error(context, thread_id, thread_run_id)
-                        streaming_state.yielded_tool_indices.add(tool_idx)
+                    async for msg in self._process_pending_tool_execution(
+                        execution=execution,
+                        streaming_state=streaming_state,
+                        thread_id=thread_id,
+                        thread_run_id=thread_run_id
+                    ):
+                        yield msg
 
             # Save and yield finish status if limit was reached
             if streaming_state.finish_reason == "tool_limit_reached":
@@ -1681,3 +1646,97 @@ class ResponseProcessor:
             },
             thread_run_id=thread_run_id,
         )
+
+    async def _process_pending_tool_execution(
+        self,
+        execution: Dict[str, Any],
+        streaming_state: StreamingState,
+        thread_id: str,
+        thread_run_id: str
+    ) -> AsyncGenerator[Optional[Dict[str, Any]], None]:
+        """Process a single pending tool execution and handle its results."""
+        tool_idx = execution.get("tool_index", -1)
+        context = execution["context"]
+        task = execution["task"]
+        tool_call = execution["tool_call"]
+
+        # Status already yielded during stream processing
+        if tool_idx in streaming_state.yielded_tool_indices:
+            async for msg in self._process_previously_yielded_tool(
+                task=task,
+                context=context,
+                tool_call=tool_call,
+                tool_idx=tool_idx,
+                streaming_state=streaming_state,
+                thread_id=thread_id,
+                thread_run_id=thread_run_id
+            ):
+                yield msg
+            return
+
+        # Status wasn't yielded before - process and yield now
+        async for msg in self._process_and_yield_new_tool_result(
+            task=task,
+            context=context,
+            tool_call=tool_call,
+            tool_idx=tool_idx,
+            streaming_state=streaming_state,
+            thread_id=thread_id,
+            thread_run_id=thread_run_id
+        ):
+            yield msg
+
+    async def _process_previously_yielded_tool(
+        self,
+        task: asyncio.Task,
+        context: ToolExecutionContext,
+        tool_call: Dict[str, Any],
+        tool_idx: int,
+        streaming_state: StreamingState,
+        thread_id: str,
+        thread_run_id: str
+    ) -> AsyncGenerator[Optional[Dict[str, Any]], None]:
+        """Process a tool execution that was already yielded during streaming."""
+        logger.debug(f"Status for tool index {tool_idx} already yielded.")
+        try:
+            if task.done():
+                result = task.result()
+                context.result = result
+                streaming_state.tool_results_buffer.append(
+                    (tool_call, result, tool_idx, context)
+                )
+            else:  # Should not happen with asyncio.wait
+                logger.warning(f"Task for tool index {tool_idx} not done after wait.")
+        except Exception as e:
+            logger.error(f"Error getting result for pending tool execution {tool_idx}: {str(e)}")
+            context.error = e
+            # Save and Yield tool error status message (even if started was yielded)
+            yield await self._yield_and_save_tool_error(context, thread_id, thread_run_id)
+
+    async def _process_and_yield_new_tool_result(
+        self,
+        task: asyncio.Task,
+        context: ToolExecutionContext,
+        tool_call: Dict[str, Any],
+        tool_idx: int,
+        streaming_state: StreamingState,
+        thread_id: str,
+        thread_run_id: str
+    ) -> AsyncGenerator[Optional[Dict[str, Any]], None]:
+        """Process and yield results for a tool that wasn't yielded during streaming."""
+        try:
+            if task.done():
+                result = task.result()
+                context.result = result
+                streaming_state.tool_results_buffer.append(
+                    (tool_call, result, tool_idx, context)
+                )
+                # Save and Yield tool completed/failed status
+                yield await self._yield_and_save_tool_completed(context, None, thread_id, thread_run_id)
+                streaming_state.yielded_tool_indices.add(tool_idx)
+        except Exception as e:
+            logger.error(f"Error getting result/yielding status for pending tool execution {tool_idx}: {str(e)}")
+            context.error = e
+            # Save and Yield tool error status
+            yield await self._yield_and_save_tool_error(context, thread_id, thread_run_id)
+            streaming_state.yielded_tool_indices.add(tool_idx)
