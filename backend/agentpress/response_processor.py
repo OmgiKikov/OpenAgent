@@ -128,53 +128,27 @@ class ResponseProcessor:
         self._add_message_callback = add_message_callback
 
     async def _add_status_message(
-        self,
-        thread_id: str,
-        thread_run_id: Optional[str],
-        content: Dict[str, Any],
-        metadata: Optional[Dict[str, Any]] = None,
+        self, thread_id: str, content: Dict[str, Any], **metadata
     ) -> Optional[Dict[str, Any]]:
-        metadata = metadata.copy() if metadata is not None else {}
-        metadata["thread_run_id"] = thread_run_id
         return await self._add_message_callback(
             thread_id=thread_id, type="status", content=content, is_llm_message=False, metadata=metadata
         )
 
     async def _add_assistant_message(
-        self,
-        thread_id: str,
-        thread_run_id: Optional[str],
-        content: Dict[str, Any],
-        metadata: Optional[Dict[str, Any]] = None,
+        self, thread_id: str, content: Dict[str, Any], **metadata
     ) -> Optional[Dict[str, Any]]:
-        metadata = metadata.copy() if metadata is not None else {}
-        metadata["thread_run_id"] = thread_run_id
         return await self._add_message_callback(
             thread_id=thread_id, type="assistant", content=content, is_llm_message=True, metadata=metadata
         )
 
-    async def _add_cost_message(
-        self,
-        thread_id: str,
-        thread_run_id: Optional[str],
-        cost: float,
-        metadata: Optional[Dict[str, Any]] = None,
-    ) -> Optional[Dict[str, Any]]:
-        metadata = metadata.copy() if metadata is not None else {}
-        metadata["thread_run_id"] = thread_run_id
+    async def _add_cost_message(self, thread_id: str, cost: float, **metadata) -> Optional[Dict[str, Any]]:
         return await self._add_message_callback(
             thread_id=thread_id, type="cost", content={"cost": cost}, is_llm_message=False, metadata=metadata
         )
 
-    async def _add_tool_message(
-        self, thread_id: str, content: Dict[str, Any], metadata: Optional[Dict[str, Any]]
-    ) -> Optional[Dict[str, Any]]:
+    async def _add_tool_message(self, thread_id: str, content: Dict[str, Any], **metadata) -> Optional[Dict[str, Any]]:
         return await self._add_message_callback(
-            thread_id=thread_id,
-            type="tool",
-            content=content,
-            is_llm_message=True,
-            metadata=metadata,
+            thread_id=thread_id, type="tool", content=content, is_llm_message=True, metadata=metadata
         )
 
     async def _create_thread_run_start_status_message(
@@ -182,20 +156,15 @@ class ResponseProcessor:
     ) -> Optional[Dict[str, Any]]:
         return await self._add_status_message(
             thread_id=thread_id,
+            content={"status_type": "thread_run_start", "thread_run_id": thread_run_id},
             thread_run_id=thread_run_id,
-            content={
-                "status_type": "thread_run_start",
-                "thread_run_id": thread_run_id,
-            },
         )
 
     async def _create_assistant_response_start_status_message(
         self, thread_id: str, thread_run_id: str
     ) -> Optional[Dict[str, Any]]:
         return await self._add_status_message(
-            thread_id=thread_id,
-            thread_run_id=thread_run_id,
-            content={"status_type": "assistant_response_start"},
+            thread_id=thread_id, content={"status_type": "assistant_response_start"}, thread_run_id=thread_run_id
         )
 
     async def _create_initial_status_messages(
@@ -536,11 +505,11 @@ class ResponseProcessor:
             if streaming_state.finish_reason == "tool_limit_reached":
                 yield await self._add_status_message(
                     thread_id=thread_id,
-                    thread_run_id=thread_run_id,
                     content={
                         "status_type": "finish",
                         "finish_reason": streaming_state.finish_reason,
                     },
+                    thread_run_id=thread_run_id,
                 )
                 logger.info(
                     f"Stream finished with reason: {streaming_state.finish_reason} "
@@ -591,12 +560,12 @@ class ResponseProcessor:
 
                 streaming_state.last_assistant_message_object = await self._add_assistant_message(
                     thread_id=thread_id,
-                    thread_run_id=thread_run_id,
                     content={
                         "role": "assistant",
                         "content": streaming_state.accumulated_content,
                         "tool_calls": complete_native_tool_calls or None,
                     },
+                    thread_run_id=thread_run_id,
                 )
 
                 if streaming_state.last_assistant_message_object:
@@ -612,12 +581,12 @@ class ResponseProcessor:
                     # Save and yield an error status
                     yield await self._add_status_message(
                         thread_id=thread_id,
-                        thread_run_id=thread_run_id,
                         content={
                             "role": "system",
                             "status_type": "error",
                             "message": "Failed to save final assistant message",
                         },
+                        thread_run_id=thread_run_id,
                     )
 
             # --- Process All Tool Results Now ---
@@ -783,7 +752,7 @@ class ResponseProcessor:
                     )
                     if final_cost is not None and final_cost > 0:
                         logger.info(f"Calculated final cost for stream: {final_cost}")
-                        await self._add_cost_message(thread_id=thread_id, thread_run_id=thread_run_id, cost=final_cost)
+                        await self._add_cost_message(thread_id=thread_id, cost=final_cost, thread_run_id=thread_run_id)
                         logger.info(f"Cost message saved for stream: {final_cost}")
                     else:
                         logger.info("Stream cost calculation resulted in zero or None, not storing cost message.")
@@ -794,11 +763,8 @@ class ResponseProcessor:
             if streaming_state.finish_reason and streaming_state.finish_reason != "tool_limit_reached":
                 yield await self._add_status_message(
                     thread_id=thread_id,
+                    content={"status_type": "finish", "finish_reason": streaming_state.finish_reason},
                     thread_run_id=thread_run_id,
-                    content={
-                        "status_type": "finish",
-                        "finish_reason": streaming_state.finish_reason,
-                    },
                 )
 
         except Exception as e:
@@ -806,8 +772,8 @@ class ResponseProcessor:
             # Save and yield error status message
             yield await self._add_status_message(
                 thread_id=thread_id,
-                thread_run_id=locals().get("thread_run_id"),
                 content={"role": "system", "status_type": "error", "message": str(e)},
+                thread_run_id=locals().get("thread_run_id"),
             )
 
             # Re-raise the same exception (not a new one) to ensure proper error propagation
@@ -819,8 +785,8 @@ class ResponseProcessor:
             try:
                 yield await self._add_status_message(
                     thread_id=thread_id,
-                    thread_run_id=locals().get("thread_run_id"),
                     content={"status_type": "thread_run_end"},
+                    thread_run_id=locals().get("thread_run_id"),
                 )
             except Exception as final_e:
                 logger.error(f"Error in finally block: {str(final_e)}", exc_info=True)
@@ -861,11 +827,8 @@ class ResponseProcessor:
 
             yield await self._add_status_message(
                 thread_id=thread_id,
+                content={"status_type": "thread_run_start", "thread_run_id": thread_run_id},
                 thread_run_id=thread_run_id,
-                content={
-                    "status_type": "thread_run_start",
-                    "thread_run_id": thread_run_id,
-                },
             )
 
             # Extract finish_reason, content, tool calls
@@ -944,12 +907,8 @@ class ResponseProcessor:
             # --- SAVE and YIELD Final Assistant Message ---
             assistant_message_object = await self._add_assistant_message(
                 thread_id=thread_id,
+                content={"role": "assistant", "content": content, "tool_calls": native_tool_calls_for_message or None},
                 thread_run_id=thread_run_id,
-                content={
-                    "role": "assistant",
-                    "content": content,
-                    "tool_calls": native_tool_calls_for_message or None,
-                },
             )
             if assistant_message_object:
                 yield assistant_message_object
@@ -958,12 +917,8 @@ class ResponseProcessor:
 
                 yield await self._add_status_message(
                     thread_id=thread_id,
+                    content={"role": "system", "status_type": "error", "message": "Failed to save assistant message"},
                     thread_run_id=thread_run_id,
-                    content={
-                        "role": "system",
-                        "status_type": "error",
-                        "message": "Failed to save assistant message",
-                    },
                 )
 
             # --- Calculate and Store Cost ---
@@ -991,7 +946,7 @@ class ResponseProcessor:
 
                     if final_cost is not None and final_cost > 0:
                         logger.info(f"Calculated final cost for non-stream: {final_cost}")
-                        await self._add_cost_message(thread_id=thread_id, thread_run_id=thread_run_id, cost=final_cost)
+                        await self._add_cost_message(thread_id=thread_id, cost=final_cost, thread_run_id=thread_run_id)
                         logger.info(f"Cost message saved for non-stream: {final_cost}")
                     else:
                         logger.info("Non-stream cost calculation resulted in zero or None, not storing cost message.")
@@ -1059,11 +1014,8 @@ class ResponseProcessor:
             if finish_reason:
                 yield await self._add_status_message(
                     thread_id=thread_id,
+                    content={"status_type": "finish", "finish_reason": finish_reason},
                     thread_run_id=thread_run_id,
-                    content={
-                        "status_type": "finish",
-                        "finish_reason": finish_reason,
-                    },
                 )
                 if finish_reason == "tool_limit_reached":
                     logger.info(
@@ -1076,8 +1028,8 @@ class ResponseProcessor:
             # Save and yield error status
             yield await self._add_status_message(
                 thread_id=thread_id,
-                thread_run_id=locals().get("thread_run_id"),
                 content={"role": "system", "status_type": "error", "message": str(e)},
+                thread_run_id=locals().get("thread_run_id"),
             )
 
             # Re-raise the same exception (not a new one) to ensure proper error propagation
@@ -1088,8 +1040,8 @@ class ResponseProcessor:
             # Save and Yield the final thread_run_end status
             yield await self._add_status_message(
                 thread_id=thread_id,
-                thread_run_id=locals().get("thread_run_id"),
                 content={"status_type": "thread_run_end"},
+                thread_run_id=locals().get("thread_run_id"),
             )
 
     # XML parsing methods
@@ -1561,7 +1513,7 @@ class ResponseProcessor:
 
             # Add the message with the appropriate role
             return await self._add_tool_message(
-                thread_id=thread_id, content={"role": result_role, "content": content}, metadata=metadata
+                thread_id=thread_id, content={"role": result_role, "content": content}, **metadata
             )
 
         except Exception as e:
@@ -1569,10 +1521,9 @@ class ResponseProcessor:
             # Fallback to a simple message in case of error
             try:
                 fallback_message = {"role": "user", "content": str(result)}
+                metadata = {"assistant_message_id": assistant_message_id} if assistant_message_id else {}
                 return await self._add_tool_message(
-                    thread_id=thread_id,
-                    content=fallback_message,
-                    metadata=({"assistant_message_id": assistant_message_id} if assistant_message_id else {}),
+                    thread_id=thread_id, content=fallback_message, assistant_message_id=assistant_message_id, **metadata
                 )
             except Exception as e2:
                 logger.error(f"Failed even with fallback message: {str(e2)}", exc_info=True)
@@ -1612,7 +1563,7 @@ class ResponseProcessor:
                 "name": function_name,
                 "content": content,
             },
-            metadata=metadata,
+            **metadata,
         )
 
     def _create_tool_context(
@@ -1658,7 +1609,6 @@ class ResponseProcessor:
         """Format, save and return a tool started status message."""
         return await self._add_status_message(
             thread_id=thread_id,
-            thread_run_id=thread_run_id,
             content={
                 "role": "assistant",
                 "status_type": "tool_started",
@@ -1666,8 +1616,9 @@ class ResponseProcessor:
                 "xml_tag_name": context.xml_tag_name,
                 "message": f"Starting execution of {context.xml_tag_name or context.function_name}",
                 "tool_index": context.tool_index,
-                "tool_call_id": context.tool_call.get("id"),  # Include tool_call ID if native
+                "tool_call_id": context.tool_call.get("id"),
             },
+            thread_run_id=thread_run_id,
         )
 
     async def _yield_and_save_tool_completed(
@@ -1682,7 +1633,7 @@ class ResponseProcessor:
             # Delegate to error saving if result is missing
             return await self._yield_and_save_tool_error(context, thread_id, thread_run_id)
 
-        metadata = {}
+        metadata = {"thread_run_id": thread_run_id}
         # Add the tool result message ID to the metadata if available and successful
         if context.result.success and tool_message_id:
             metadata["linked_tool_result_message_id"] = tool_message_id
@@ -1694,7 +1645,6 @@ class ResponseProcessor:
 
         return await self._add_status_message(
             thread_id=thread_id,
-            thread_run_id=thread_run_id,
             content={
                 "role": "assistant",
                 "status_type": "tool_completed" if context.result.success else "tool_failed",
@@ -1705,7 +1655,7 @@ class ResponseProcessor:
                 "tool_index": context.tool_index,
                 "tool_call_id": context.tool_call.get("id"),
             },
-            metadata=metadata,
+            **metadata,
         )
 
     async def _yield_and_save_tool_error(
@@ -1715,7 +1665,6 @@ class ResponseProcessor:
         # Save the status message
         return await self._add_status_message(
             thread_id=thread_id,
-            thread_run_id=thread_run_id,
             content={
                 "role": "assistant",
                 "status_type": "tool_error",
@@ -1726,4 +1675,5 @@ class ResponseProcessor:
                 "tool_index": context.tool_index,
                 "tool_call_id": context.tool_call.get("id"),
             },
+            thread_run_id=thread_run_id,
         )
