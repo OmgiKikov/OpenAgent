@@ -124,8 +124,8 @@ class ResponseProcessor:
             add_message_callback: Callback function to add messages to the thread.
                 MUST return the full saved message object (dict) or None.
         """
-        self.tool_registry = tool_registry
-        self.add_message = add_message_callback
+        self._tool_registry = tool_registry
+        self._add_message_callback = add_message_callback
 
     async def _add_status_message(
         self,
@@ -136,7 +136,7 @@ class ResponseProcessor:
     ) -> Optional[Dict[str, Any]]:
         metadata = metadata.copy() if metadata is not None else {}
         metadata["thread_run_id"] = thread_run_id
-        return await self.add_message(
+        return await self._add_message_callback(
             thread_id=thread_id, type="status", content=content, is_llm_message=False, metadata=metadata
         )
 
@@ -558,7 +558,7 @@ class ResponseProcessor:
                     "tool_calls": complete_native_tool_calls or None,
                 }
 
-                streaming_state.last_assistant_message_object = await self.add_message(
+                streaming_state.last_assistant_message_object = await self._add_message_callback(
                     thread_id=thread_id,
                     type="assistant",
                     content=message_data,
@@ -750,7 +750,7 @@ class ResponseProcessor:
                     )
                     if final_cost is not None and final_cost > 0:
                         logger.info(f"Calculated final cost for stream: {final_cost}")
-                        await self.add_message(
+                        await self._add_message_callback(
                             thread_id=thread_id,
                             type="cost",
                             content={"cost": final_cost},
@@ -920,7 +920,7 @@ class ResponseProcessor:
                 "content": content,
                 "tool_calls": native_tool_calls_for_message or None,
             }
-            assistant_message_object = await self.add_message(
+            assistant_message_object = await self._add_message_callback(
                 thread_id=thread_id,
                 type="assistant",
                 content=message_data,
@@ -967,7 +967,7 @@ class ResponseProcessor:
 
                     if final_cost is not None and final_cost > 0:
                         logger.info(f"Calculated final cost for non-stream: {final_cost}")
-                        await self.add_message(
+                        await self._add_message_callback(
                             thread_id=thread_id,
                             type="cost",
                             content={"cost": final_cost},
@@ -1153,7 +1153,7 @@ class ResponseProcessor:
         current_tag = None
 
         # Find the earliest occurrence of any registered tag
-        for tag_name in self.tool_registry.xml_tools.keys():
+        for tag_name in self._tool_registry.xml_tools.keys():
             start_pattern = f"<{tag_name}"
             tag_pos = content.find(start_pattern, pos)
 
@@ -1293,7 +1293,7 @@ class ResponseProcessor:
             logger.info(f"Found XML tag: {xml_tag_name}")
 
             # Get tool info and schema from registry
-            tool_info = self.tool_registry.get_xml_tool(xml_tag_name)
+            tool_info = self._tool_registry.get_xml_tool(xml_tag_name)
             if not tool_info or not tool_info["schema"].xml_schema:
                 logger.error(f"No tool or schema found for tag: {xml_tag_name}")
                 return None
@@ -1379,7 +1379,7 @@ class ResponseProcessor:
                     arguments = {"text": arguments}
 
             # Get and execute the tool function
-            available_functions = self.tool_registry.get_available_functions()
+            available_functions = self._tool_registry.get_available_functions()
             tool_fn = available_functions.get(function_name)
 
             if not tool_fn:
@@ -1544,7 +1544,7 @@ class ResponseProcessor:
             # Add the message with the appropriate role
             result_message = {"role": result_role, "content": content}
 
-            message_id = await self.add_message(
+            message_id = await self._add_message_callback(
                 thread_id=thread_id,
                 type="tool",
                 content=result_message,
@@ -1559,7 +1559,7 @@ class ResponseProcessor:
             # Fallback to a simple message in case of error
             try:
                 fallback_message = {"role": "user", "content": str(result)}
-                message_id = await self.add_message(
+                message_id = await self._add_message_callback(
                     thread_id=thread_id,
                     type="tool",
                     content=fallback_message,
@@ -1605,7 +1605,7 @@ class ResponseProcessor:
         }
 
         # Add as a tool message to the conversation history
-        message_id = await self.add_message(
+        message_id = await self._add_message_callback(
             thread_id=thread_id,
             type="tool",
             content=tool_message,
