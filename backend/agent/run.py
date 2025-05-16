@@ -8,7 +8,6 @@ from agent.tools.sb_deploy_tool import SandboxDeployTool
 from agent.tools.sb_expose_tool import SandboxExposeTool
 from agent.tools.web_search_tool import SandboxWebSearchTool
 from agent.tools.mcp_tools import MCPTools
-from dotenv import load_dotenv
 from utils.config import config
 
 from agentpress.thread_manager import ThreadManager
@@ -23,7 +22,9 @@ from utils.auth_utils import get_account_id_from_thread
 from services.billing import check_billing_status
 from agent.tools.sb_vision_tool import SandboxVisionTool
 
-load_dotenv()
+
+async def get_database_client(thread_manager: ThreadManager):
+    return await thread_manager.db.client
 
 
 async def initialize_tools(
@@ -275,7 +276,6 @@ async def run_agent_iteration(
     thread_manager: ThreadManager,
     thread_id: str,
     account_id: str,
-    system_message: Dict,
     model_name: str,
     stream: bool,
     native_max_auto_continues: int,
@@ -285,27 +285,24 @@ async def run_agent_iteration(
 ) -> AsyncGenerator[Dict[str, Any], None]:
     """Run a single iteration of the agent and yield response chunks."""
     # Check billing status
-    client = await thread_manager.db.client
+    client = await get_database_client(thread_manager=thread_manager)
     billing_status = await check_billing_status_for_account(client=client, account_id=account_id)
     if billing_status:
         yield billing_status
         return
 
     try:
-        # Get temporary message if available
-        temporary_message = await extract_temporary_message(thread_id=thread_id, client=client)
-
         # Make the LLM call
         response = await thread_manager.run_thread(
             thread_id=thread_id,
-            system_prompt=system_message,
+            system_prompt=get_system_message(),
             stream=stream,
             llm_model=model_name,
             llm_temperature=0,
             llm_max_tokens=get_model_token_limit(model_name),
             tool_choice="auto",
             max_tool_calls=1,
-            temporary_message=temporary_message,
+            temporary_message=await extract_temporary_message(thread_id=thread_id, client=client),
             processor_config=ProcessorConfig(
                 xml_tool_calling=False,
                 native_tool_calling=True,
@@ -383,6 +380,28 @@ async def run_agent_iteration(
         yield {"type": "status", "status": "error", "message": error_msg}
 
 
+async def is_last_message_from_assistant(client: AsyncClient, thread_id: str) -> bool:
+    """Check if the last message in the thread is from the assistant."""
+    latest_message = await retrieve_latest_message(client=client, thread_id=thread_id)
+    return latest_message is not None and latest_message.get("type") == "assistant"
+
+
+def should_stop_execution(chunk: Dict[str, Any]) -> bool:
+    return isinstance(chunk, dict) and chunk.get("type") == "status" and chunk.get("status") in ["error", "stopped"]
+
+
+def should_stop_further_iterations(chunk: Dict[str, Any]) -> bool:
+    return (
+        isinstance(chunk, dict)
+        and chunk.get("type") == "status"
+        and chunk.get("status") in ["error_detected", "tool_detected"]
+    )
+
+
+def get_system_message():
+    return {"role": "system", "content": get_system_prompt()}
+
+
 async def run_agent(
     thread_id: str,
     project_id: str,
@@ -401,9 +420,8 @@ async def run_agent(
 
     # Initialize thread manager and configuration
     thread_manager = await configure_thread_manager(thread_id=thread_id, project_id=project_id, mcp_session=mcp_session)
-    client = await thread_manager.db.client
+    client = await get_database_client(thread_manager=thread_manager)
     account_id = await get_account_id_for_thread(client=client, thread_id=thread_id)
-    system_message = {"role": "system", "content": get_system_prompt()}
 
     await validate_sandbox_for_project(client=client, project_id=project_id)
 
@@ -415,9 +433,7 @@ async def run_agent(
         iteration_count += 1
         logger.info(f"🔄 Running iteration {iteration_count} of {max_iterations}...")
 
-        # Check if last message is from assistant before running iteration
-        latest_message = await retrieve_latest_message(client=client, thread_id=thread_id)
-        if latest_message is not None and latest_message.get("type") == "assistant":
+        if await is_last_message_from_assistant(client=client, thread_id=thread_id):
             logger.info("Last message was from assistant, stopping execution")
             break
 
@@ -425,7 +441,6 @@ async def run_agent(
             thread_manager=thread_manager,
             thread_id=thread_id,
             account_id=account_id,
-            system_message=system_message,
             model_name=model_name,
             stream=stream,
             native_max_auto_continues=native_max_auto_continues,
@@ -435,13 +450,9 @@ async def run_agent(
         ):
             yield chunk
 
-            # Check for status chunks that might indicate stopping
-            if isinstance(chunk, dict) and chunk.get("type") == "status":
-                status = chunk.get("status")
-                if status in ["error", "stopped"]:
-                    # Stop all iterations on errors
-                    continue_execution = False
-                    break
-                elif status in ["error_detected", "tool_detected"]:
-                    # Stop further iterations but don't break current one
-                    continue_execution = False
+            if should_stop_execution(chunk):
+                continue_execution = False
+                break
+
+            if should_stop_further_iterations(chunk):
+                continue_execution = False
