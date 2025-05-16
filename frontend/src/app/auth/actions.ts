@@ -9,11 +9,11 @@ export async function signIn(prevState: any, formData: FormData) {
   const returnUrl = formData.get('returnUrl') as string | undefined;
 
   if (!email || !email.includes('@')) {
-    return { message: 'Please enter a valid email address' };
+    return { message: 'Пожалуйста, введите корректный email' };
   }
 
   if (!password || password.length < 6) {
-    return { message: 'Password must be at least 6 characters' };
+    return { message: 'Пароль должен содержать минимум 6 символов' };
   }
 
   const supabase = await createClient();
@@ -24,7 +24,7 @@ export async function signIn(prevState: any, formData: FormData) {
   });
 
   if (error) {
-    return { message: error.message || 'Could not authenticate user' };
+    return { message: error.message || 'Не удалось авторизовать пользователя' };
   }
 
   // Use client-side navigation instead of server-side redirect
@@ -39,15 +39,15 @@ export async function signUp(prevState: any, formData: FormData) {
   const returnUrl = formData.get('returnUrl') as string | undefined;
 
   if (!email || !email.includes('@')) {
-    return { message: 'Please enter a valid email address' };
+    return { message: 'Пожалуйста, введите корректный email' };
   }
 
   if (!password || password.length < 6) {
-    return { message: 'Password must be at least 6 characters' };
+    return { message: 'Пароль должен содержать минимум 6 символов' };
   }
 
   if (password !== confirmPassword) {
-    return { message: 'Passwords do not match' };
+    return { message: 'Пароли не совпадают' };
   }
 
   const supabase = await createClient();
@@ -61,7 +61,7 @@ export async function signUp(prevState: any, formData: FormData) {
   });
 
   if (error) {
-    return { message: error.message || 'Could not create account' };
+    return { message: error.message || 'Не удалось создать аккаунт' };
   }
 
   // Try to sign in immediately
@@ -73,7 +73,7 @@ export async function signUp(prevState: any, formData: FormData) {
   if (signInError) {
     return {
       message:
-        'Account created! Check your email to confirm your registration.',
+        'Аккаунт создан! Проверьте вашу почту для подтверждения регистрации.',
     };
   }
 
@@ -86,7 +86,7 @@ export async function forgotPassword(prevState: any, formData: FormData) {
   const origin = formData.get('origin') as string;
 
   if (!email || !email.includes('@')) {
-    return { message: 'Please enter a valid email address' };
+    return { message: 'Пожалуйста, введите корректный email' };
   }
 
   const supabase = await createClient();
@@ -96,12 +96,12 @@ export async function forgotPassword(prevState: any, formData: FormData) {
   });
 
   if (error) {
-    return { message: error.message || 'Could not send password reset email' };
+    return { message: error.message || 'Не удалось отправить письмо для сброса пароля' };
   }
 
   return {
     success: true,
-    message: 'Check your email for a password reset link',
+    message: 'Проверьте вашу почту — мы отправили ссылку для сброса пароля',
   };
 }
 
@@ -110,11 +110,11 @@ export async function resetPassword(prevState: any, formData: FormData) {
   const confirmPassword = formData.get('confirmPassword') as string;
 
   if (!password || password.length < 6) {
-    return { message: 'Password must be at least 6 characters' };
+    return { message: 'Пароль должен содержать минимум 6 символов' };
   }
 
   if (password !== confirmPassword) {
-    return { message: 'Passwords do not match' };
+    return { message: 'Пароли не совпадают' };
   }
 
   const supabase = await createClient();
@@ -124,12 +124,12 @@ export async function resetPassword(prevState: any, formData: FormData) {
   });
 
   if (error) {
-    return { message: error.message || 'Could not update password' };
+    return { message: error.message || 'Не удалось обновить пароль' };
   }
 
   return {
     success: true,
-    message: 'Password updated successfully',
+    message: 'Пароль успешно обновлён',
   };
 }
 
@@ -138,7 +138,7 @@ export async function signOut() {
   const { error } = await supabase.auth.signOut();
 
   if (error) {
-    return { message: error.message || 'Could not sign out' };
+    return { message: error.message || 'Не удалось выйти из аккаунта' };
   }
 
   return redirect('/');
