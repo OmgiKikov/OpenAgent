@@ -101,7 +101,6 @@ class StreamingState:
     native_tool_call_count: int = 0
     finish_reason: Optional[str] = None
     last_assistant_message_object: Optional[Dict[str, Any]] = None
-    tool_result_message_objects: Dict = field(default_factory=dict)
 
 
 def filter_messages(func):
@@ -696,7 +695,6 @@ class ResponseProcessor:
 
                         # Yield the saved tool result object
                         if saved_tool_result_object:
-                            streaming_state.tool_result_message_objects[tool_idx] = saved_tool_result_object
                             yield saved_tool_result_object
                         else:
                             logger.error(
@@ -781,7 +779,6 @@ class ResponseProcessor:
         tool_index = 0
         tool_call_count = 0  # Combined counter for all tool calls
         assistant_message_object = None
-        tool_result_message_objects = {}
         finish_reason = None
         native_tool_calls_for_message = []
 
@@ -966,7 +963,6 @@ class ResponseProcessor:
 
                     # Yield the saved tool result object
                     if saved_tool_result_object:
-                        tool_result_message_objects[tool_index] = saved_tool_result_object
                         yield saved_tool_result_object
                     else:
                         logger.error(f"Failed to save tool result for index {tool_index}")
