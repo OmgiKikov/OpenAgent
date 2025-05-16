@@ -1,5 +1,4 @@
 'use client';
-import { HeroVideoSection } from '@/components/home/sections/hero-video-section';
 import { siteConfig } from '@/lib/home';
 import { ArrowRight, Github, X, AlertCircle } from 'lucide-react';
 import { FlickeringGrid } from '@/components/home/ui/flickering-grid';
@@ -225,8 +224,21 @@ export function HeroSection() {
   };
 
   return (
-    <section id="hero" className="w-full relative overflow-hidden">
+    <section id="hero" className="w-full relative overflow-hidden pb-28">
       <div className="relative flex flex-col items-center w-full px-6">
+        {/* Информационный баннер */}
+        <div className="w-full max-w-4xl mx-auto mt-6 relative z-20">
+          <div className="flex items-center justify-center gap-2 bg-secondary/10 border border-secondary/20 rounded-full px-4 py-2 text-sm text-secondary font-medium">
+            <span className="inline-flex items-center justify-center text-secondary bg-secondary/20 rounded-full p-1">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 16V12M12 8H12.01M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" 
+                  stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </span>
+            <span>Трансформируйте свой рабочий процесс с OpenAgent - ИИ, который работает для вас 24/7</span>
+          </div>
+        </div>
+        
         {/* Left side flickering grid with gradient fades */}
         <div className="absolute left-0 top-0 h-[600px] md:h-[800px] w-1/3 -z-10 overflow-hidden">
           {/* Horizontal fade from left to right */}
@@ -309,11 +321,11 @@ export function HeroSection() {
           </Link>
           <div className="flex flex-col items-center justify-center gap-5">
             <h1 className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-medium tracking-tighter text-balance text-center">
-              <span className="text-secondary">Suna</span>
-              <span className="text-primary">, your AI Employee.</span>
+              <span className="text-secondary">OpenAgent</span>
+              <span className="text-primary"> - Ваш ИИ-партнер для продуктивности</span>
             </h1>
             <p className="text-base md:text-lg text-center text-muted-foreground font-medium text-balance leading-relaxed tracking-tight">
-              {hero.description}
+              Автоматизируйте рутинные задачи, управляйте своей работой и повышайте продуктивность с ИИ-ассистентом, который адаптируется к вашим потребностям
             </p>
           </div>
           <div className="flex items-center w-full max-w-xl gap-2 flex-wrap justify-center">
@@ -353,9 +365,6 @@ export function HeroSection() {
             </form>
           </div>
         </div>
-      </div>
-      <div className="mb-10 max-w-4xl mx-auto">
-        <HeroVideoSection />
       </div>
 
       {/* Auth Dialog */}
