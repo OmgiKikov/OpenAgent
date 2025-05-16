@@ -102,7 +102,6 @@ class StreamingState:
     finish_reason: Optional[str] = None
     last_assistant_message_object: Optional[Dict[str, Any]] = None
     tool_result_message_objects: Dict = field(default_factory=dict)
-    has_printed_thinking_prefix: bool = False
 
 
 def filter_messages(func):
@@ -193,11 +192,6 @@ class ResponseProcessor:
 
             # Check for and log Anthropic thinking content
             if delta and hasattr(delta, "reasoning_content") and delta.reasoning_content:
-                if not streaming_state.has_printed_thinking_prefix:
-                    # print("[THINKING]: ", end='', flush=True)
-                    streaming_state.has_printed_thinking_prefix = True
-                # print(delta.reasoning_content, end='', flush=True)
-                # Append reasoning to main content to be saved in the final message
                 streaming_state.accumulated_content += delta.reasoning_content
 
             # Process content chunk
@@ -466,7 +460,7 @@ class ResponseProcessor:
                         execution=execution,
                         streaming_state=streaming_state,
                         thread_id=thread_id,
-                        thread_run_id=thread_run_id
+                        thread_run_id=thread_run_id,
                     ):
                         yield msg
 
@@ -1648,11 +1642,7 @@ class ResponseProcessor:
         )
 
     async def _process_pending_tool_execution(
-        self,
-        execution: Dict[str, Any],
-        streaming_state: StreamingState,
-        thread_id: str,
-        thread_run_id: str
+        self, execution: Dict[str, Any], streaming_state: StreamingState, thread_id: str, thread_run_id: str
     ) -> AsyncGenerator[Optional[Dict[str, Any]], None]:
         """Process a single pending tool execution and handle its results."""
         tool_idx = execution.get("tool_index", -1)
@@ -1669,7 +1659,7 @@ class ResponseProcessor:
                 tool_idx=tool_idx,
                 streaming_state=streaming_state,
                 thread_id=thread_id,
-                thread_run_id=thread_run_id
+                thread_run_id=thread_run_id,
             ):
                 yield msg
             return
@@ -1682,7 +1672,7 @@ class ResponseProcessor:
             tool_idx=tool_idx,
             streaming_state=streaming_state,
             thread_id=thread_id,
-            thread_run_id=thread_run_id
+            thread_run_id=thread_run_id,
         ):
             yield msg
 
@@ -1694,7 +1684,7 @@ class ResponseProcessor:
         tool_idx: int,
         streaming_state: StreamingState,
         thread_id: str,
-        thread_run_id: str
+        thread_run_id: str,
     ) -> AsyncGenerator[Optional[Dict[str, Any]], None]:
         """Process a tool execution that was already yielded during streaming."""
         logger.debug(f"Status for tool index {tool_idx} already yielded.")
@@ -1702,9 +1692,7 @@ class ResponseProcessor:
             if task.done():
                 result = task.result()
                 context.result = result
-                streaming_state.tool_results_buffer.append(
-                    (tool_call, result, tool_idx, context)
-                )
+                streaming_state.tool_results_buffer.append((tool_call, result, tool_idx, context))
             else:  # Should not happen with asyncio.wait
                 logger.warning(f"Task for tool index {tool_idx} not done after wait.")
         except Exception as e:
@@ -1721,16 +1709,14 @@ class ResponseProcessor:
         tool_idx: int,
         streaming_state: StreamingState,
         thread_id: str,
-        thread_run_id: str
+        thread_run_id: str,
     ) -> AsyncGenerator[Optional[Dict[str, Any]], None]:
         """Process and yield results for a tool that wasn't yielded during streaming."""
         try:
             if task.done():
                 result = task.result()
                 context.result = result
-                streaming_state.tool_results_buffer.append(
-                    (tool_call, result, tool_idx, context)
-                )
+                streaming_state.tool_results_buffer.append((tool_call, result, tool_idx, context))
                 # Save and Yield tool completed/failed status
                 yield await self._yield_and_save_tool_completed(context, None, thread_id, thread_run_id)
                 streaming_state.yielded_tool_indices.add(tool_idx)
