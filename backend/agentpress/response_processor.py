@@ -90,6 +90,7 @@ class ProcessorConfig:
 class StreamingState:
     accumulated_content: str = ""
     tool_calls_buffer: Dict = field(default_factory=dict)
+    tool_results_buffer: List[Tuple] = field(default_factory=list)
     current_xml_content: str = ""
     xml_chunks_buffer: List = field(default_factory=list)
     pending_tool_executions: List = field(default_factory=list)
@@ -453,7 +454,6 @@ class ResponseProcessor:
                     break
 
             # Wait for pending tool executions from streaming phase
-            tool_results_buffer = []  # Stores (tool_call, result, tool_index, context)
             if streaming_state.pending_tool_executions:
                 logger.info(
                     f"Waiting for {len(streaming_state.pending_tool_executions)} pending streamed tool executions"
@@ -473,7 +473,9 @@ class ResponseProcessor:
                             if execution["task"].done():
                                 result = execution["task"].result()
                                 context.result = result
-                                tool_results_buffer.append((execution["tool_call"], result, tool_idx, context))
+                                streaming_state.tool_results_buffer.append(
+                                    (execution["tool_call"], result, tool_idx, context)
+                                )
                             else:  # Should not happen with asyncio.wait
                                 logger.warning(f"Task for tool index {tool_idx} not done after wait.")
                         except Exception as e:
@@ -488,7 +490,9 @@ class ResponseProcessor:
                         if execution["task"].done():
                             result = execution["task"].result()
                             context.result = result
-                            tool_results_buffer.append((execution["tool_call"], result, tool_idx, context))
+                            streaming_state.tool_results_buffer.append(
+                                (execution["tool_call"], result, tool_idx, context)
+                            )
                             # Save and Yield tool completed/failed status
                             yield await self._yield_and_save_tool_completed(context, None, thread_id, thread_run_id)
                             streaming_state.yielded_tool_indices.add(tool_idx)
@@ -661,9 +665,9 @@ class ResponseProcessor:
                 tool_results_map = {}  # tool_index -> (tool_call, result, context)
 
                 # Populate from buffer if executed on stream
-                if config.execute_on_stream and tool_results_buffer:
-                    logger.info(f"Processing {len(tool_results_buffer)} buffered tool results")
-                    for tool_call, result, tool_idx, context in tool_results_buffer:
+                if config.execute_on_stream and streaming_state.tool_results_buffer:
+                    logger.info(f"Processing {len(streaming_state.tool_results_buffer)} buffered tool results")
+                    for tool_call, result, tool_idx, context in streaming_state.tool_results_buffer:
                         if streaming_state.last_assistant_message_object:
                             context.assistant_message_id = streaming_state.last_assistant_message_object["message_id"]
                         tool_results_map[tool_idx] = (tool_call, result, context)
