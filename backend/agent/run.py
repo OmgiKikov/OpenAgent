@@ -261,14 +261,16 @@ async def configure_thread_manager(
     return thread_manager
 
 
-async def detect_xml_tool_usage_from_text(text: str) -> Optional[str]:
+def detect_xml_tool_usage_from_chunk_content(chunk_content: Dict[str, Any]) -> Optional[str]:
     """Detect if an XML tool was used in the text"""
-    if "</ask>" in text:
-        return "ask"
-    elif "</complete>" in text:
-        return "complete"
-    elif "</web-browser-takeover>" in text:
-        return "web-browser-takeover"
+    text = chunk_content.get("content", "")
+    if isinstance(text, str):
+        if "</ask>" in text:
+            return "ask"
+        elif "</complete>" in text:
+            return "complete"
+        elif "</web-browser-takeover>" in text:
+            return "web-browser-takeover"
     return None
 
 
@@ -287,18 +289,27 @@ async def get_generator_for_response(
     return response_gen
 
 
+def detect_native_tool_usage_from_chunk_content(chunk_content: Dict[str, Any]) -> Optional[str]:
+    tool_calls = chunk_content.get("tool_calls", [])
+    for tool_call in tool_calls:
+        if tool_call.get('type') == 'function':
+            return tool_call.get('function', {}).get('name')
+
+
 async def detect_tool_usage_from_chunk(chunk: Dict[str, Any]) -> Optional[str]:
     if chunk.get("type") == "assistant" and "content" in chunk:
         try:
-            content = chunk.get("content", "{}")
-            content_data = content if isinstance(content, dict) else json.loads(content)
-            assistant_text = content_data.get("content", "")
+            chunk_content = chunk.get("content", {})
+            chunk_content = chunk_content if isinstance(chunk_content, dict) else json.loads(chunk_content)
+            xml_tool = detect_xml_tool_usage_from_chunk_content(chunk_content=chunk_content)
+            native_tool = detect_native_tool_usage_from_chunk_content(chunk_content=chunk_content)
 
-            if isinstance(assistant_text, str):
-                tool = await detect_xml_tool_usage_from_text(assistant_text)
-                if tool:
-                    logger.info(f"Agent used XML tool: {tool}")
-                return tool
+            if xml_tool:
+                logger.info(f"Agent used XML tool: {xml_tool}")
+                return xml_tool
+            if native_tool:
+                logger.info(f"Agent used native tool: {native_tool}")
+                return native_tool
         except Exception as e:
             logger.error(f"Error processing chunk: {e}")
 

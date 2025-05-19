@@ -97,7 +97,7 @@ Ask user a question and wait for response. Use for: 1) Requesting clarification 
         {
             "type": "function",
             "function": {
-                "name": "web_browser_takeover",
+                "name": "web-browser-takeover",
                 "description": "Request user takeover of browser interaction. Use this tool when: 1) The page requires complex human interaction that automated tools cannot handle, 2) Authentication or verification steps require human input, 3) The page has anti-bot measures that prevent automated access, 4) Complex form filling or navigation is needed, 5) The page requires human verification (CAPTCHA, etc.). IMPORTANT: This tool should be used as a last resort after web-search and crawl-webpage have failed, and when direct browser tools are insufficient. Always provide clear context about why takeover is needed and what actions the user should take.",
                 "parameters": {
                     "type": "object",
