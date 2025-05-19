@@ -261,15 +261,80 @@ async def configure_thread_manager(
     return thread_manager
 
 
-async def detect_xml_tool_usage(assistant_text: str) -> Optional[str]:
-    """Detect if an XML tool was used in the assistant's response."""
-    if "</ask>" in assistant_text:
+async def detect_xml_tool_usage_from_text(text: str) -> Optional[str]:
+    """Detect if an XML tool was used in the text"""
+    if "</ask>" in text:
         return "ask"
-    elif "</complete>" in assistant_text:
+    elif "</complete>" in text:
         return "complete"
-    elif "</web-browser-takeover>" in assistant_text:
+    elif "</web-browser-takeover>" in text:
         return "web-browser-takeover"
     return None
+
+
+async def get_generator_for_response(
+    response: Dict[str, Any] | AsyncGenerator[Dict[str, Any], None],
+) -> AsyncGenerator[Dict[str, Any], None]:
+    if isinstance(response, dict):
+
+        async def dict_to_generator():
+            yield response
+
+        response_gen = dict_to_generator()
+    else:
+        response_gen = response
+
+    return response_gen
+
+
+async def detect_tool_usage_from_chunk(chunk: Dict[str, Any]) -> Optional[str]:
+    if chunk.get("type") == "assistant" and "content" in chunk:
+        try:
+            content = chunk.get("content", "{}")
+            content_data = content if isinstance(content, dict) else json.loads(content)
+            assistant_text = content_data.get("content", "")
+
+            if isinstance(assistant_text, str):
+                tool = await detect_xml_tool_usage_from_text(assistant_text)
+                if tool:
+                    logger.info(f"Agent used XML tool: {tool}")
+                return tool
+        except Exception as e:
+            logger.error(f"Error processing chunk: {e}")
+
+
+async def run_agent_iteration_generator(
+    response: Dict[str, Any] | AsyncGenerator[Dict[str, Any], None],
+) -> AsyncGenerator[Dict[str, Any], None]:
+    if isinstance(response, dict) and "status" in response and response["status"] == "error":
+        logger.error(f"Error response from run_thread: {response.get('message', 'Unknown error')}")
+        yield response
+        return
+
+    error_detected = False
+    detected_tool = None
+
+    try:
+        response_gen = await get_generator_for_response(response=response)
+
+        async for chunk in response_gen:
+            if isinstance(chunk, dict) and chunk.get("type") == "status" and chunk.get("status") == "error":
+                error_detected = True
+
+            detected_tool = await detect_tool_usage_from_chunk(chunk=chunk) or detected_tool
+
+            yield chunk
+
+        if error_detected:
+            logger.info("Error detected in response")
+            yield {"type": "status", "status": "error_detected"}
+        elif detected_tool in ["ask", "complete", "web-browser-takeover"]:
+            logger.info(f"Agent decided to stop with tool: {detected_tool}")
+            yield {"type": "status", "status": "tool_detected", "tool": detected_tool}
+    except Exception as e:
+        error_msg = f"Error during response streaming: {str(e)}"
+        logger.error(f"Error: {error_msg}")
+        yield {"type": "status", "status": "error", "message": error_msg}
 
 
 async def run_agent_iteration(
@@ -318,61 +383,8 @@ async def run_agent_iteration(
             enable_context_manager=enable_context_manager,
         )
 
-        if isinstance(response, dict) and "status" in response and response["status"] == "error":
-            logger.error(f"Error response from run_thread: {response.get('message', 'Unknown error')}")
-            yield response
-            return
-
-        # Track state during iteration
-        error_detected = False
-        detected_tool = None
-
-        # Process response chunks
-        try:
-            # Convert dict response to AsyncGenerator if needed
-            if isinstance(response, dict):
-
-                async def dict_to_generator():
-                    yield response
-
-                response_gen = dict_to_generator()
-            else:
-                response_gen = response
-
-            async for chunk in response_gen:
-                # Check for error chunks
-                if isinstance(chunk, dict) and chunk.get("type") == "status" and chunk.get("status") == "error":
-                    error_detected = True
-
-                # Check for XML tool usage in assistant content chunks
-                if chunk.get("type") == "assistant" and "content" in chunk:
-                    try:
-                        content = chunk.get("content", "{}")
-                        content_data = content if isinstance(content, dict) else json.loads(content)
-                        assistant_text = content_data.get("content", "")
-
-                        if isinstance(assistant_text, str):
-                            tool = await detect_xml_tool_usage(assistant_text)
-                            if tool:
-                                detected_tool = tool
-                                logger.info(f"Agent used XML tool: {tool}")
-                    except Exception as e:
-                        logger.error(f"Error processing chunk: {e}")
-
-                # Pass the chunk back to caller
-                yield chunk
-
-            # Send status information as the final chunk
-            if error_detected:
-                logger.info("Error detected in response")
-                yield {"type": "status", "status": "error_detected"}
-            elif detected_tool in ["ask", "complete", "web-browser-takeover"]:
-                logger.info(f"Agent decided to stop with tool: {detected_tool}")
-                yield {"type": "status", "status": "tool_detected", "tool": detected_tool}
-        except Exception as e:
-            error_msg = f"Error during response streaming: {str(e)}"
-            logger.error(f"Error: {error_msg}")
-            yield {"type": "status", "status": "error", "message": error_msg}
+        async for chunk in run_agent_iteration_generator(response=response):
+            yield chunk
 
     except Exception as e:
         error_msg = f"Error running thread: {str(e)}"
