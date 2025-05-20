@@ -48,21 +48,3 @@ class MCPTools(Tool):
                 )
 
             return remote_func
-
-
-class GoogleCalendarTool(Tool):
-    def __init__(self, session: ClientSession):
-        super().__init__()
-        self._session = session
-
-    @xml_schema(
-        tag_name="list-calendars",
-        example="""
-        <!-- List all available calendars. -->
-        """,
-    )
-    async def list_calendars(self, **kwargs) -> ToolResult:
-        print(f"Run list_calendars. Tool kwargs: {kwargs}")
-        result = await self._session.call_tool("list-calendars", arguments=kwargs)
-        content = json.dumps([element.model_dump(mode="json") for element in result.content])
-        return ToolResult(success=not result.isError, output=json.dumps(content, ensure_ascii=False))
