@@ -1,6 +1,6 @@
 import json
 from typing import List, Any
-from agentpress.tool import Tool, ToolSchema, SchemaType, ToolResult, xml_schema
+from agentpress.tool import Tool, ToolSchema, SchemaType, ToolResult
 from mcp import ClientSession
 from mcp import Tool as McpTool
 
