@@ -49,7 +49,7 @@ export interface PricingTier {
 }
 
 export const siteConfig = {
-  name: 'Kortix Suna',
+  name: 'OpenAgent',
   description: 'The Generalist AI Agent that acts on your behalf.',
   cta: 'Start Free',
   url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
@@ -58,7 +58,7 @@ export const siteConfig = {
     email: 'support@kortix.ai',
     twitter: 'https://x.com/kortixai',
     discord: 'https://discord.gg/kortixai',
-    github: 'https://github.com/Kortix-ai/Suna',
+    github: 'https://github.com/Kortix-ai/OpenAgent',
     instagram: 'https://instagram.com/kortixai',
   },
   nav: {
@@ -125,7 +125,7 @@ export const siteConfig = {
       features: [
         '2 hours',
         'Private projects',
-        'Access to intelligent Model (Full Suna)',
+        'Access to intelligent Model (Full OpenAgent)',
       ],
       stripePriceId: config.SUBSCRIPTION_TIERS.TIER_2_20.priceId,
       upgradePlans: [],
@@ -459,7 +459,7 @@ export const siteConfig = {
   benefits: [
     {
       id: 1,
-      text: "Automate everyday tasks with Suna's powerful AI capabilities.",
+      text: "Automate everyday tasks with OpenAgent's powerful AI capabilities.",
       image: '/Device-6.png',
     },
     {
@@ -469,7 +469,7 @@ export const siteConfig = {
     },
     {
       id: 3,
-      text: 'Improve focus on high-value work as Suna handles the routine.',
+      text: 'Improve focus on high-value work as OpenAgent handles the routine.',
       image: '/Device-8.png',
     },
     {
@@ -775,13 +775,13 @@ export const siteConfig = {
 
         title: 'Community Powered',
         description:
-          "Join a thriving community of developers and users continuously enhancing and expanding Suna's capabilities.",
+          "Join a thriving community of developers and users continuously enhancing and expanding OpenAgent's capabilities.",
       },
     ],
   },
   quoteSection: {
     quote:
-      'Kortix Suna has transformed how we approach everyday tasks. The level of automation it provides, combined with its open source nature, makes it an invaluable tool for our entire organization.',
+      'OpenAgent has transformed how we approach everyday tasks. The level of automation it provides, combined with its open source nature, makes it an invaluable tool for our entire organization.',
     author: {
       name: 'Alex Johnson',
       role: 'CTO, Innovatech',
@@ -791,7 +791,7 @@ export const siteConfig = {
   pricing: {
     title: 'Open Source & Free Forever',
     description:
-      'Kortix Suna is 100% open source and free to use. No hidden fees, no premium features locked behind paywalls.',
+      'OpenAgent is 100% open source and free to use. No hidden fees, no premium features locked behind paywalls.',
     pricingItems: [
       {
         name: 'Community',
@@ -806,7 +806,7 @@ export const siteConfig = {
           'Community support',
         ],
         description: 'Perfect for individual users and developers',
-        buttonText: 'Hire Suna',
+        buttonText: 'Hire OpenAgent',
         buttonColor: 'bg-accent text-primary',
         isPopular: false,
       },
@@ -1068,31 +1068,31 @@ export const siteConfig = {
         id: 2,
         question: 'OpenAgent действительно бесплатен?',
         answer:
-          'Kortix Suna works by analyzing your requirements, leveraging advanced AI algorithms to understand context, and executing tasks based on your instructions. It can integrate with your workflow, learn from feedback, and continuously improve its performance.',
+          'OpenAgent works by analyzing your requirements, leveraging advanced AI algorithms to understand context, and executing tasks based on your instructions. It can integrate with your workflow, learn from feedback, and continuously improve its performance.',
       },
       {
         id: 3,
-        question: 'Is Kortix Suna really free?',
+        question: 'Is OpenAgent really free?',
         answer:
-          'Yes, Kortix Suna is completely free and open source. We believe in democratizing AI technology and making it accessible to everyone. You can use it, modify it, and contribute to its development without any cost.',
+          'Yes, OpenAgent is completely free and open source. We believe in democratizing AI technology and making it accessible to everyone. You can use it, modify it, and contribute to its development without any cost.',
       },
       {
         id: 4,
-        question: 'Can I integrate Suna with my existing tools?',
+        question: 'Can I integrate OpenAgent with my existing tools?',
         answer:
-          'Yes, Kortix Suna is designed to be highly compatible with popular tools and platforms. We offer APIs and pre-built integrations for seamless connection with your existing workflow tools and systems.',
+          'Yes, OpenAgent is designed to be highly compatible with popular tools and platforms. We offer APIs and pre-built integrations for seamless connection with your existing workflow tools and systems.',
       },
       {
         id: 5,
-        question: 'How can I contribute to Kortix Suna?',
+        question: 'How can I contribute to OpenAgent?',
         answer:
-          'You can contribute to Kortix Suna by submitting pull requests on GitHub, reporting bugs, suggesting new features, or helping with documentation. Join our Discord community to connect with other contributors and Hire Suna.',
+          'You can contribute to OpenAgent by submitting pull requests on GitHub, reporting bugs, suggesting new features, or helping with documentation. Join our Discord community to connect with other contributors and Hire OpenAgent.',
       },
       {
         id: 6,
-        question: 'How does Kortix Suna save me time?',
+        question: 'How does OpenAgent save me time?',
         answer:
-          'Kortix Suna automates repetitive tasks, streamlines workflows, and provides quick solutions to common challenges. This automation and efficiency can save hours of manual work, allowing you to focus on more strategic activities.',
+          'OpenAgent automates repetitive tasks, streamlines workflows, and provides quick solutions to common challenges. This automation and efficiency can save hours of manual work, allowing you to focus on more strategic activities.',
       },
     ],
   },

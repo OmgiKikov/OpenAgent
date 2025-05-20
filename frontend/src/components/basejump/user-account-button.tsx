@@ -48,19 +48,19 @@ export default async function UserAccountButton() {
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
-            <Link href="/dashboard">My Account</Link>
+            <Link href="/dashboard">Мой аккаунт</Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link href="/settings">Settings</Link>
+            <Link href="/settings">Настройки</Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link href="/settings/teams">Teams</Link>
+            <Link href="/settings/teams">Команды</Link>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem>
           <form action={signOut}>
-            <button>Log out</button>
+            <button>Выйти</button>
           </form>
         </DropdownMenuItem>
       </DropdownMenuContent>

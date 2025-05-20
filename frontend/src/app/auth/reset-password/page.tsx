@@ -67,8 +67,7 @@ function ResetPasswordContent() {
                   </h1>
 
                   <p className="text-base md:text-lg text-center text-muted-foreground font-medium text-balance leading-relaxed tracking-tight max-w-md mb-6">
-                    Your password has been successfully updated. You can now
-                    sign in with your new password.
+                    Ваш пароль успешно обновлен. Вы можете теперь войти с вашим новым паролем.
                   </p>
 
                   <div className="flex flex-col sm:flex-row gap-4 w-full max-w-sm">
@@ -76,7 +75,7 @@ function ResetPasswordContent() {
                       href="/auth"
                       className="flex h-12 items-center justify-center w-full text-center rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-md"
                     >
-                      Go to sign in
+                      Войти
                     </Link>
                   </div>
                 </div>
@@ -168,7 +167,7 @@ function ResetPasswordContent() {
                     href="/auth"
                     className="flex h-12 px-6 items-center justify-center text-center rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-md"
                   >
-                    Return to sign in
+                    Назад ко входу
                   </Link>
                 </div>
               )}
