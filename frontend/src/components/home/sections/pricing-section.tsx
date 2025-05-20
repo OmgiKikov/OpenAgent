@@ -24,6 +24,7 @@ import {
 } from '@/lib/api';
 import { toast } from 'sonner';
 import { isLocalMode } from '@/lib/config';
+import { AlertTriangle } from 'lucide-react';
 
 // Constants
 const DEFAULT_SELECTED_PLAN = '6 hours';
@@ -666,12 +667,18 @@ export function PricingSection({
     }
   };
 
-  if (isLocalMode()) {
+  // Показываем секцию в любом режиме
+  const isHidden = false;
+  
+  if (isHidden) {
     return (
-      <div className="p-4 bg-muted/30 border border-border rounded-lg text-center">
-        <p className="text-sm text-muted-foreground">
-          Running in local development mode - billing features are disabled
-        </p>
+      <div className="flex justify-center py-8">
+        <div className="border border-primary/20 bg-primary/5 dark:bg-primary/10 rounded-lg p-3 text-sm text-primary dark:text-primary max-w-md flex items-center shadow-sm">
+          <AlertTriangle className="mr-2 h-4 w-4" />
+          <span>
+            ✨ Повысьте свою продуктивность с OpenAgent - ИИ-ассистентом, который работает для вас! ✨
+          </span>
+        </div>
       </div>
     );
   }
@@ -685,42 +692,111 @@ export function PricingSection({
         <>
           <SectionHeader>
             <h2 className="text-3xl md:text-4xl font-medium tracking-tighter text-center text-balance">
-              Choose the right plan for your needs
+              Технологические Преимущества
             </h2>
             <p className="text-muted-foreground text-center text-balance font-medium">
-              Start with our free plan or upgrade to a premium plan for more
-              usage hours
+              OpenAgent - это передовые технологии искусственного интеллекта для корпоративного использования
             </p>
           </SectionHeader>
-          <div className="relative w-full h-full">
-            <div className="absolute -top-14 left-1/2 -translate-x-1/2">
-              <PricingTabs
-                activeTab={deploymentType}
-                setActiveTab={handleTabChange}
-                className="mx-auto"
-              />
-            </div>
-          </div>
         </>
       )}
 
-      {deploymentType === 'cloud' && (
-        <div className="grid min-[650px]:grid-cols-2 min-[900px]:grid-cols-3 gap-4 w-full max-w-6xl mx-auto px-6">
-          {siteConfig.cloudPricingItems.map((tier) => (
-            <PricingTier
-              key={tier.name}
-              tier={tier}
-              currentSubscription={currentSubscription}
-              isLoading={isLoading}
-              isFetchingPlan={isFetchingPlan}
-              onPlanSelect={handlePlanSelect}
-              onSubscriptionUpdate={handleSubscriptionUpdate}
-              isAuthenticated={isAuthenticated}
-              returnUrl={returnUrl}
-            />
-          ))}
+      <div className="grid min-[650px]:grid-cols-2 min-[900px]:grid-cols-3 gap-6 w-full max-w-6xl mx-auto px-6">
+        <div className="rounded-xl overflow-hidden relative flex flex-col md:shadow-[0px_61px_24px_-10px_rgba(0,0,0,0.01),0px_34px_20px_-8px_rgba(0,0,0,0.05),0px_15px_15px_-6px_rgba(0,0,0,0.09),0px_4px_8px_-2px_rgba(0,0,0,0.10),0px_0px_0px_1px_rgba(0,0,0,0.08)] bg-accent p-6">
+          <div className="rounded-full p-2 bg-secondary/10 w-fit mb-4">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-secondary">
+              <path d="M10.5 1.5H8.25C7.09987 1.5 6.52481 1.5 6.08156 1.72246C5.69817 1.91045 5.41045 2.19817 5.22246 2.58156C5 3.02481 5 3.59987 5 4.75V19.25C5 20.4001 5 20.9752 5.22246 21.4184C5.41045 21.8018 5.69817 22.0896 6.08156 22.2775C6.52481 22.5 7.09987 22.5 8.25 22.5H15.75C16.9001 22.5 17.4752 22.5 17.9184 22.2775C18.3018 22.0896 18.5896 21.8018 18.7775 21.4184C19 20.9752 19 20.4001 19 19.25V10.5M10.5 1.5C11.4479 1.5 12.4323 1.5 13.2509 1.54442C14.0678 1.58875 14.8844 1.67729 15.552 2.0032C16.3886 2.41993 17.0801 3.11142 17.4968 3.94801C17.8227 4.61564 17.9112 5.43223 17.9556 6.24908C18 7.06767 18 8.05212 18 9.00002V10.5M10.5 1.5C9.55193 1.5 8.56735 1.5 7.74875 1.54442C6.93191 1.58875 6.11532 1.67729 5.44769 2.0032C4.61111 2.41993 3.91962 3.11142 3.50289 3.94801C3.17698 4.61564 3.08844 5.43223 3.04411 6.24908C3 7.06767 3 8.05212 3 9.00002V12M19 10.5H12.75C11.5999 10.5 11.0248 10.5 10.5816 10.7225C10.1982 10.9105 9.91045 11.1982 9.72246 11.5816C9.5 12.0248 9.5 12.5999 9.5 13.75V19.25C9.5 20.4001 9.5 20.9752 9.72246 21.4184C9.91045 21.8018 10.1982 22.0896 10.5816 22.2775C11.0248 22.5 11.5999 22.5 12.75 22.5H15.75C16.9001 22.5 17.4752 22.5 17.9184 22.2775C18.3018 22.0896 18.5896 21.8018 18.7775 21.4184C19 20.9752 19 20.4001 19 19.25V10.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <h3 className="text-xl font-medium mb-2">Мультимодальность</h3>
+          <p className="text-muted-foreground mb-4">OpenAgent работает с разными типами данных: текстом, изображениями, кодом и документами</p>
+          <ul className="space-y-2 mt-auto">
+            <li className="flex items-center gap-2">
+              <div className="size-5 rounded-full border border-primary/20 flex items-center justify-center">
+                <CheckIcon className="size-3 text-primary" />
+              </div>
+              <span className="text-sm">Анализ изображений и документов</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <div className="size-5 rounded-full border border-primary/20 flex items-center justify-center">
+                <CheckIcon className="size-3 text-primary" />
+              </div>
+              <span className="text-sm">Генерация и редактирование кода</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <div className="size-5 rounded-full border border-primary/20 flex items-center justify-center">
+                <CheckIcon className="size-3 text-primary" />
+              </div>
+              <span className="text-sm">Работа с разными форматами файлов</span>
+            </li>
+          </ul>
         </div>
-      )}
+
+        <div className="rounded-xl overflow-hidden relative flex flex-col md:shadow-[0px_61px_24px_-10px_rgba(0,0,0,0.01),0px_34px_20px_-8px_rgba(0,0,0,0.05),0px_15px_15px_-6px_rgba(0,0,0,0.09),0px_4px_8px_-2px_rgba(0,0,0,0.10),0px_0px_0px_1px_rgba(0,0,0,0.08)] bg-accent p-6">
+          <div className="rounded-full p-2 bg-secondary/10 w-fit mb-4">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-secondary">
+              <path d="M5 8C5 5.17157 5 3.75736 5.87868 2.87868C6.75736 2 8.17157 2 11 2H13C15.8284 2 17.2426 2 18.1213 2.87868C19 3.75736 19 5.17157 19 8V16C19 18.8284 19 20.2426 18.1213 21.1213C17.2426 22 15.8284 22 13 22H11C8.17157 22 6.75736 22 5.87868 21.1213C5 20.2426 5 18.8284 5 16V8Z" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M9 22V19C9 17.8954 9.89543 17 11 17H13C14.1046 17 15 17.8954 15 19V22" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M10 15C11.1046 15 12 14.1046 12 13C12 11.8954 11.1046 11 10 11C8.89543 11 8 11.8954 8 13C8 14.1046 8.89543 15 10 15Z" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M14 15C15.1046 15 16 14.1046 16 13C16 11.8954 15.1046 11 14 11C12.8954 11 12 11.8954 12 13C12 14.1046 12.8954 15 14 15Z" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M10 6H14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-medium mb-2">Автономность</h3>
+          <p className="text-muted-foreground mb-4">OpenAgent самостоятельно выполняет сложные задачи, используя различные инструменты и сервисы</p>
+          <ul className="space-y-2 mt-auto">
+            <li className="flex items-center gap-2">
+              <div className="size-5 rounded-full border border-primary/20 flex items-center justify-center">
+                <CheckIcon className="size-3 text-primary" />
+              </div>
+              <span className="text-sm">Доступ к интернету и APIs</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <div className="size-5 rounded-full border border-primary/20 flex items-center justify-center">
+                <CheckIcon className="size-3 text-primary" />
+              </div>
+              <span className="text-sm">Исполнение кода и скриптов</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <div className="size-5 rounded-full border border-primary/20 flex items-center justify-center">
+                <CheckIcon className="size-3 text-primary" />
+              </div>
+              <span className="text-sm">Сложные многоэтапные задачи</span>
+            </li>
+          </ul>
+        </div>
+
+        <div className="rounded-xl overflow-hidden relative flex flex-col md:shadow-[0px_61px_24px_-10px_rgba(0,0,0,0.01),0px_34px_20px_-8px_rgba(0,0,0,0.05),0px_15px_15px_-6px_rgba(0,0,0,0.09),0px_4px_8px_-2px_rgba(0,0,0,0.10),0px_0px_0px_1px_rgba(0,0,0,0.08)] bg-accent p-6">
+          <div className="rounded-full p-2 bg-secondary/10 w-fit mb-4">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-secondary">
+              <path d="M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M12.2422 7.75732C12.5469 7.62637 12.8725 7.55971 13.2031 7.55971C14.5945 7.55971 15.7266 8.69177 15.7266 10.0832C15.7266 11.4746 14.5945 12.6066 13.2031 12.6066C13.0812 12.6066 12.9616 12.595 12.8447 12.5725M12.2422 7.75732C12.0899 7.8244 11.9475 7.90654 11.8175 8.00154C11.1218 8.52542 10.6797 9.3541 10.6797 10.2927C10.6797 10.8295 10.5332 11.3282 10.2775 11.7516M12.2422 7.75732C12.0663 7.84032 11.9035 7.94337 11.7578 8.06399M10.2775 11.7516C9.90263 12.3986 9.2461 12.8442 8.48828 12.8442C7.41413 12.8442 6.54297 11.973 6.54297 10.8989C6.54297 9.82473 7.41413 8.95357 8.48828 8.95357C8.82603 8.95357 9.14108 9.04371 9.41133 9.2019M10.2775 11.7516C10.2171 11.8429 10.1506 11.9293 10.0785 12.0101M9.41133 9.2019C9.13521 9.36451 8.90521 9.59088 8.73828 9.86452M9.41133 9.2019C9.64831 9.05553 9.92456 8.95357 10.2188 8.95357C10.6255 8.95357 10.9933 9.12254 11.2578 9.3934C11.395 9.53472 11.5061 9.70259 11.5836 9.88897M8.85055 14.3028C8.62159 14.1943 8.3648 14.1348 8.09375 14.1348C6.93602 14.1348 6 15.0708 6 16.2285C6 17.3863 6.93602 18.3223 8.09375 18.3223C8.79665 18.3223 9.41797 17.9777 9.76562 17.4435M12.5664 15.8505C12.7758 15.3348 13.2817 14.9691 13.875 14.9691C14.6934 14.9691 15.3555 15.6312 15.3555 16.4496C15.3555 17.268 14.6934 17.9301 13.875 17.9301C13.1838 17.9301 12.6106 17.4371 12.4746 16.7985M16.4766 16.1598C16.828 16.3568 17.0781 16.7289 17.0781 17.1582C17.0781 17.768 16.5859 18.2598 15.9766 18.2598C15.3672 18.2598 14.875 17.768 14.875 17.1582C14.875 16.5485 15.3672 16.0566 15.9766 16.0566C16.1427 16.0566 16.3005 16.0941 16.4395 16.1598" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-medium mb-2">Персонализация</h3>
+          <p className="text-muted-foreground mb-4">OpenAgent адаптируется к вашему стилю работы и накапливает знания о ваших предпочтениях</p>
+          <ul className="space-y-2 mt-auto">
+            <li className="flex items-center gap-2">
+              <div className="size-5 rounded-full border border-primary/20 flex items-center justify-center">
+                <CheckIcon className="size-3 text-primary" />
+              </div>
+              <span className="text-sm">Сохранение контекста бесед</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <div className="size-5 rounded-full border border-primary/20 flex items-center justify-center">
+                <CheckIcon className="size-3 text-primary" />
+              </div>
+              <span className="text-sm">Обучение на ваших задачах</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <div className="size-5 rounded-full border border-primary/20 flex items-center justify-center">
+                <CheckIcon className="size-3 text-primary" />
+              </div>
+              <span className="text-sm">Настраиваемые рабочие процессы</span>
+            </li>
+          </ul>
+        </div>
+      </div>
     </section>
   );
 }

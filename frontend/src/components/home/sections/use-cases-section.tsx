@@ -26,15 +26,14 @@ export function UseCasesSection() {
   return (
     <section
       id="use-cases"
-      className="flex flex-col items-center justify-center gap-10 pb-10 w-full relative"
+      className="flex flex-col items-center justify-center gap-10 py-20 w-full relative"
     >
       <SectionHeader>
         <h2 className="text-3xl md:text-4xl font-medium tracking-tighter text-center text-balance">
-          See Suna in action
+          Повысьте Эффективность с OpenAgent
         </h2>
         <p className="text-muted-foreground text-center text-balance font-medium">
-          Explore real-world examples of how Suna completes complex tasks
-          autonomously
+          Узнайте, как OpenAgent может трансформировать ваш рабочий процесс с помощью этих практических примеров
         </p>
       </SectionHeader>
 

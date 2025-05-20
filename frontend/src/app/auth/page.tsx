@@ -188,7 +188,7 @@ function LoginContent() {
     if (!forgotPasswordEmail || !forgotPasswordEmail.includes('@')) {
       setForgotPasswordStatus({
         success: false,
-        message: 'Please enter a valid email address',
+        message: 'Пожалуйста, введите корректный email',
       });
       return;
     }
@@ -257,21 +257,20 @@ function LoginContent() {
                   </div>
 
                   <h1 className="text-3xl md:text-4xl lg:text-5xl font-medium tracking-tighter text-center text-balance text-primary mb-4">
-                    Check your email
+                    Проверьте вашу почту
                   </h1>
 
                   <p className="text-base md:text-lg text-center text-muted-foreground font-medium text-balance leading-relaxed tracking-tight max-w-md mb-2">
-                    We've sent a confirmation link to:
+                    Мы отправили ссылку для подтверждения на:
                   </p>
 
                   <p className="text-lg font-medium mb-6">
-                    {registrationEmail || 'your email address'}
+                    {registrationEmail || 'ваш email'}
                   </p>
 
                   <div className="bg-green-50 dark:bg-green-950/20 border border-green-100 dark:border-green-900/50 rounded-lg p-6 mb-8 max-w-md w-full">
                     <p className="text-sm text-green-800 dark:text-green-400 leading-relaxed">
-                      Click the link in the email to activate your account. If
-                      you don't see the email, check your spam folder.
+                      Перейдите по ссылке в письме, чтобы активировать аккаунт. Если письма нет — проверьте папку "Спам".
                     </p>
                   </div>
 
@@ -280,13 +279,13 @@ function LoginContent() {
                       href="/"
                       className="flex h-12 items-center justify-center w-full text-center rounded-full border border-border bg-background hover:bg-accent/20 transition-all"
                     >
-                      Return to home
+                      На главную
                     </Link>
                     <button
                       onClick={resetRegistrationSuccess}
                       className="flex h-12 items-center justify-center w-full text-center rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-md"
                     >
-                      Back to sign in
+                      Назад ко входу
                     </button>
                   </div>
                 </div>
@@ -361,17 +360,17 @@ function LoginContent() {
               >
                 <ArrowLeft className="h-4 w-4 text-muted-foreground" />
                 <span className="font-medium text-muted-foreground text-xs tracking-wide">
-                  Back to home
+                  На главную
                 </span>
               </Link>
 
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-medium tracking-tighter text-center text-balance text-primary">
-                {isSignUp ? 'Join Suna' : 'Welcome back'}
+                {isSignUp ? 'Присоединяйтесь к OpenAgent' : 'С возвращением'}
               </h1>
               <p className="text-base md:text-lg text-center text-muted-foreground font-medium text-balance leading-relaxed tracking-tight mt-2 mb-6">
                 {isSignUp
-                  ? 'Create your account and start building with AI'
-                  : 'Sign in to your account to continue'}
+                  ? 'Создайте аккаунт и начните работать с OpenAgent'
+                  : 'Войдите в свой аккаунт, чтобы продолжить'}
               </p>
             </div>
           </div>
@@ -399,7 +398,7 @@ function LoginContent() {
                 </div>
                 <div className="relative flex justify-center text-sm">
                   <span className="px-2 bg-[#F3F4F6] dark:bg-[#F9FAFB]/[0.02] text-muted-foreground">
-                    or continue with email
+                    или продолжить по email
                   </span>
                 </div>
               </div>
@@ -411,7 +410,7 @@ function LoginContent() {
                     id="email"
                     name="email"
                     type="email"
-                    placeholder="Email address"
+                    placeholder="Email адрес"
                     className="h-12 rounded-full bg-background border-border"
                     required
                   />
@@ -422,7 +421,7 @@ function LoginContent() {
                     id="password"
                     name="password"
                     type="password"
-                    placeholder="Password"
+                    placeholder="Пароль"
                     className="h-12 rounded-full bg-background border-border"
                     required
                   />
@@ -434,7 +433,7 @@ function LoginContent() {
                       id="confirmPassword"
                       name="confirmPassword"
                       type="password"
-                      placeholder="Confirm password"
+                      placeholder="Подтвердите пароль"
                       className="h-12 rounded-full bg-background border-border"
                       required
                     />
@@ -447,16 +446,16 @@ function LoginContent() {
                       <SubmitButton
                         formAction={handleSignIn}
                         className="w-full h-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-md"
-                        pendingText="Signing in..."
+                        pendingText="Вход..."
                       >
-                        Sign in
+                        Войти
                       </SubmitButton>
 
                       <Link
                         href={`/auth?mode=signup${returnUrl ? `&returnUrl=${returnUrl}` : ''}`}
                         className="flex h-12 items-center justify-center w-full text-center rounded-full border border-border bg-background hover:bg-accent/20 transition-all"
                       >
-                        Create new account
+                        Создать новый аккаунт
                       </Link>
                     </>
                   ) : (
@@ -464,16 +463,16 @@ function LoginContent() {
                       <SubmitButton
                         formAction={handleSignUp}
                         className="w-full h-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-md"
-                        pendingText="Creating account..."
+                        pendingText="Создание аккаунта..."
                       >
-                        Sign up
+                        Зарегистрироваться
                       </SubmitButton>
 
                       <Link
                         href={`/auth${returnUrl ? `?returnUrl=${returnUrl}` : ''}`}
                         className="flex h-12 items-center justify-center w-full text-center rounded-full border border-border bg-background hover:bg-accent/20 transition-all"
                       >
-                        Back to sign in
+                        Назад ко входу
                       </Link>
                     </>
                   )}
@@ -486,20 +485,20 @@ function LoginContent() {
                       onClick={() => setForgotPasswordOpen(true)}
                       className="text-sm text-primary hover:underline"
                     >
-                      Forgot password?
+                      Забыли пароль?
                     </button>
                   </div>
                 )}
               </form>
 
               <div className="mt-8 text-center text-xs text-muted-foreground">
-                By continuing, you agree to our{' '}
+                Продолжая, вы соглашаетесь с нашими{' '}
                 <Link href="/terms" className="text-primary hover:underline">
-                  Terms of Service
+                  Условиями использования
                 </Link>{' '}
-                and{' '}
+                и{' '}
                 <Link href="/privacy" className="text-primary hover:underline">
-                  Privacy Policy
+                  Политикой конфиденциальности
                 </Link>
               </div>
             </div>
@@ -513,7 +512,7 @@ function LoginContent() {
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle className="text-xl font-medium">
-                Reset Password
+                Сброс пароля
               </DialogTitle>
               <button
                 onClick={() => setForgotPasswordOpen(false)}
@@ -523,8 +522,7 @@ function LoginContent() {
               </button>
             </div>
             <DialogDescription className="text-muted-foreground">
-              Enter your email address and we'll send you a link to reset your
-              password.
+              Введите ваш email, и мы отправим ссылку для сброса пароля.
             </DialogDescription>
           </DialogHeader>
 
@@ -532,7 +530,7 @@ function LoginContent() {
             <Input
               id="forgot-password-email"
               type="email"
-              placeholder="Email address"
+              placeholder="Email адрес"
               value={forgotPasswordEmail}
               onChange={(e) => setForgotPasswordEmail(e.target.value)}
               className="h-12 rounded-full bg-background border-border"
@@ -563,14 +561,14 @@ function LoginContent() {
                 type="submit"
                 className="h-12 px-6 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-md"
               >
-                Send Reset Link
+                Отправить ссылку для сброса
               </button>
               <button
                 type="button"
                 onClick={() => setForgotPasswordOpen(false)}
                 className="h-12 px-6 rounded-full border border-border bg-background hover:bg-accent/20 transition-all"
               >
-                Cancel
+                Отмена
               </button>
             </DialogFooter>
           </form>

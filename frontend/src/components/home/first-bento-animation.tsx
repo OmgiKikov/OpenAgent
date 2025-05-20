@@ -11,7 +11,7 @@ import { AnimatePresence, motion, useInView } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 
 export function ReasoningBasic() {
-  const reasoningText = `Based on your calendar patterns and preferences, I recommend scheduling the team meeting for Tuesday at 2pm. This time slot has historically had the highest attendance rate, and it avoids conflicts with other recurring meetings.`;
+  const reasoningText = `Основываясь на ваших шаблонах календаря и предпочтениях, я рекомендую назначить командную встречу на вторник в 14:00. В это время обычно бывает наибольшая посещаемость, и оно не пересекается с другими регулярными встречами.`;
 
   return (
     <Reasoning>
@@ -70,8 +70,7 @@ export function FirstBentoAnimation() {
             }}
           >
             <p className="text-sm">
-              Hey, I need help scheduling a team meeting that works well for
-              everyone. Any suggestions for finding an optimal time slot?
+              Привет, мне нужна помощь с организацией командной встречи, чтобы всем было удобно. Есть идеи, как найти оптимальное время?
             </p>
           </motion.div>
           <div className="flex items-center bg-background rounded-full w-fit border border-border flex-shrink-0">

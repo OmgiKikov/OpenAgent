@@ -50,7 +50,7 @@ export interface PricingTier {
 
 export const siteConfig = {
   name: 'Kortix Suna',
-  description: 'The Generalist AI Agent that can act on your behalf.',
+  description: 'The Generalist AI Agent that acts on your behalf.',
   cta: 'Start Free',
   url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
   keywords: ['AI Agent', 'Generalist AI', 'Open Source AI', 'Autonomous Agent'],
@@ -63,10 +63,8 @@ export const siteConfig = {
   },
   nav: {
     links: [
-      { id: 1, name: 'Home', href: '#hero' },
-      { id: 2, name: 'Use Cases', href: '#use-cases' },
-      { id: 3, name: 'Open Source', href: '#open-source' },
-      { id: 4, name: 'Pricing', href: '#pricing' },
+      { id: 1, name: 'Главная', href: '#hero' },
+      // { id: 2, name: 'Как работает', href: '#use-cases' },
     ],
   },
   hero: {
@@ -96,12 +94,12 @@ export const siteConfig = {
         />
       </svg>
     ),
-    badge: '100% OPEN SOURCE',
-    githubUrl: 'https://github.com/kortix-ai/suna',
-    title: 'Suna, the AI Employee.',
+    badge: 'ИИ АССИСТЕНТ',
+    githubUrl: '',
+    title: 'OpenAgent, Ваш ИИ-помощник для продуктивности',
     description:
-      'Suna by Kortix – is a generalist AI Agent that acts on your behalf.',
-    inputPlaceholder: 'Ask Suna to...',
+      'Революционизируйте свой рабочий процесс с помощью ИИ-ассистента, который работает для вас 24/7',
+    inputPlaceholder: 'Попросите OpenAgent помочь вам...',
   },
   cloudPricingItems: [
     {
@@ -378,62 +376,62 @@ export const siteConfig = {
     ],
   },
   featureSection: {
-    title: 'How Kortix Suna Works',
+    title: 'Как работает OpenAgent',
     description:
-      'Discover how Kortix Suna transforms your commands into action in four easy steps',
+      'Узнайте, как OpenAgent превращает ваши команды в действия всего за четыре шага',
     items: [
       {
         id: 1,
-        title: 'Request an Action',
+        title: 'Постановка задачи',
         content:
-          'Speak or type your command—let Kortix Suna capture your intent. Your request instantly sets the process in motion.',
+          'Сформулируйте или введите свою команду — OpenAgent поймёт ваш запрос и сразу начнёт выполнение.',
         image:
           'https://images.unsplash.com/photo-1720371300677-ba4838fa0678?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
       },
       {
         id: 2,
-        title: 'AI Understanding & Planning',
+        title: 'Понимание и планирование с помощью ИИ',
         content:
-          'Suna analyzes your request, understands the context, and develops a structured plan to complete the task efficiently.',
+          'OpenAgent анализирует ваш запрос, понимает контекст и строит чёткий план для эффективного выполнения задачи.',
         image:
           'https://images.unsplash.com/photo-1686170287433-c95faf6d3608?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxmZWF0dXJlZC1waG90b3MtZmVlZHwzfHx8ZW58MHx8fHx8fA%3D%3D',
       },
       {
         id: 3,
-        title: 'Autonomous Execution',
+        title: 'Автономное выполнение',
         content:
-          'Using its capabilities and integrations, Suna executes the task independently, handling any complexities along the way.',
+          'Используя свои возможности и интеграции, OpenAgent самостоятельно выполняет задачу, справляясь со всеми сложностями.',
         image:
           'https://images.unsplash.com/photo-1720378042271-60aff1e1c538?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxmZWF0dXJlZC1waG90b3MtZmVlZHwxMHx8fGVufDB8fHx8fA%3D%3D',
       },
       {
         id: 4,
-        title: 'Results & Learning',
+        title: 'Результаты и обучение',
         content:
-          'Suna delivers results and learns from each interaction, continuously improving its performance to better serve your needs.',
+          'OpenAgent предоставляет результат и учится на каждом взаимодействии, постоянно совершенствуя свою работу под ваши задачи.',
         image:
           'https://images.unsplash.com/photo-1666882990322-e7f3b8df4f75?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1yZWxhdGVkfDF8fHxlbnwwfHx8fHw%3D',
       },
     ],
   },
   bentoSection: {
-    title: 'Empower Your Workflow with Kortix Suna',
+    title: 'Усилите свой рабочий процесс с OpenAgent',
     description:
-      'Let Kortix Suna act on your behalf with advanced AI capabilities, seamless integrations, and autonomous task execution.',
+      'Позвольте OpenAgent действовать от вашего имени с помощью продвинутого ИИ, интеграций и автономного выполнения задач.',
     items: [
       {
         id: 1,
         content: <FirstBentoAnimation />,
-        title: 'Autonomous Task Execution',
+        title: 'Автономное выполнение задач',
         description:
-          'Experience true automation with Suna. Ask your AI Agent to complete tasks, research information, and handle complex workflows with minimal supervision.',
+          'Ощутите настоящую автоматизацию с OpenAgent. Поручайте вашему ИИ-агенту выполнение задач, поиск информации и работу со сложными процессами с минимальным участием человека.',
       },
       {
         id: 2,
         content: <SecondBentoAnimation />,
-        title: 'Seamless Integrations',
+        title: 'Бесшовные интеграции',
         description:
-          'Connect Suna to your existing tools for a unified workflow. Boost productivity through AI-powered interconnected systems.',
+          'Подключайте OpenAgent к вашим существующим инструментам для единого рабочего процесса. Повышайте продуктивность благодаря ИИ-автоматизации и связанной экосистеме.',
       },
       {
         id: 3,
@@ -445,16 +443,16 @@ export const siteConfig = {
             ]}
           />
         ),
-        title: 'Intelligent Data Analysis',
+        title: 'Интеллектуальный анализ данных',
         description:
-          "Transform raw data into actionable insights in seconds. Make better decisions with Suna's real-time, adaptive intelligence.",
+          'Преобразуйте сырые данные в ценные инсайты за секунды. Принимайте лучшие решения с помощью адаптивного ИИ OpenAgent в реальном времени.',
       },
       {
         id: 4,
         content: <FourthBentoAnimation once={false} />,
-        title: 'Complete Customization',
+        title: 'Полная кастомизация',
         description:
-          'Tailor Suna to your specific needs. As an open source solution, you have full control over its capabilities, integrations, and implementation.',
+          'Настраивайте OpenAgent под свои задачи. Вы полностью контролируете его возможности, интеграции и внедрение.',
       },
     ],
   },
@@ -1056,19 +1054,19 @@ export const siteConfig = {
     },
   ],
   faqSection: {
-    title: 'Frequently Asked Questions',
+    title: 'Часто задаваемые вопросы',
     description:
-      "Answers to common questions about Kortix Suna and its capabilities. If you have any other questions, please don't hesitate to contact us.",
+      'Ответы на самые популярные вопросы о возможностях и использовании OpenAgent. Если не нашли ответа — напишите нам!',
     faQitems: [
       {
         id: 1,
-        question: 'What is an AI Agent?',
+        question: 'Что такое OpenAgent?',
         answer:
-          'An AI Agent is an intelligent software program that can perform tasks autonomously, learn from interactions, and make decisions to help achieve specific goals. It combines artificial intelligence and machine learning to provide personalized assistance and automation.',
+          'OpenAgent — это интеллектуальный ИИ-ассистент, который автоматизирует рутинные задачи, помогает принимать решения и экономит ваше время. Работает 24/7 и легко интегрируется в ваш рабочий процесс.',
       },
       {
         id: 2,
-        question: 'How does Kortix Suna work?',
+        question: 'OpenAgent действительно бесплатен?',
         answer:
           'Kortix Suna works by analyzing your requirements, leveraging advanced AI algorithms to understand context, and executing tasks based on your instructions. It can integrate with your workflow, learn from feedback, and continuously improve its performance.',
       },
@@ -1100,62 +1098,23 @@ export const siteConfig = {
   },
   ctaSection: {
     id: 'cta',
-    title: 'Start Using Kortix Suna Today',
+    title: 'Раскройте Силу ИИ Сегодня!',
     backgroundImage: '/holo.png',
     button: {
-      text: 'Get Started for free',
+      text: 'Начать Бесплатно',
       href: '/auth',
     },
-    subtext: 'The generalist AI Agent that acts on your behalf',
+    subtext: 'Присоединяйтесь к тысячам довольных пользователей, повышающих продуктивность с OpenAgent',
   },
   footerLinks: [
-    {
-      title: 'Kortix',
-      links: [
-        { id: 1, title: 'About', url: 'https://kortix.ai' },
-        { id: 3, title: 'Contact', url: 'mailto:hey@kortix.ai' },
-        { id: 4, title: 'Careers', url: 'https://kortix.ai/careers' },
-      ],
-    },
-    {
-      title: 'Resources',
-      links: [
-        {
-          id: 5,
-          title: 'Documentation',
-          url: 'https://github.com/Kortix-ai/Suna',
-        },
-        { id: 7, title: 'Discord', url: 'https://discord.gg/Py6pCBUUPw' },
-        { id: 8, title: 'GitHub', url: 'https://github.com/Kortix-ai/Suna' },
-      ],
-    },
-    {
-      title: 'Legal',
-      links: [
-        {
-          id: 9,
-          title: 'Privacy Policy',
-          url: 'https://suna.so/legal?tab=privacy',
-        },
-        {
-          id: 10,
-          title: 'Terms of Service',
-          url: 'https://suna.so/legal?tab=terms',
-        },
-        {
-          id: 11,
-          title: 'License Apache 2.0',
-          url: 'https://github.com/Kortix-ai/Suna/blob/main/LICENSE',
-        },
-      ],
-    },
+    
   ],
   useCases: [
     {
       id: 'competitor-analysis',
-      title: 'Competitor Analysis',
+      title: 'Анализ конкурентов',
       description:
-        'Analyze the market for my next company in the healthcare industry, located in the UK. Give me the major players, their market size, strengths, and weaknesses, and add their website URLs. Once done, generate a PDF report.',
+        'Проанализируйте рынок для вашей компании в сфере здравоохранения в Великобритании. Получите список основных игроков, их размер рынка, сильные и слабые стороны, а также ссылки на их сайты. В конце получите PDF-отчет.',
       category: 'research',
       featured: true,
       icon: (
@@ -1191,13 +1150,13 @@ export const siteConfig = {
       ),
       image:
         'https://images.unsplash.com/photo-1576091160550-2173dba999ef?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2400&q=80',
-      url: 'https://www.suna.so/share/5ee791ac-e19c-4986-a61c-6d0659d0e5bc',
+      url: '',
     },
     {
       id: 'vc-list',
-      title: 'VC List',
+      title: 'Список венчурных фондов',
       description:
-        'Give me the list of the most important VC Funds in the United States based on Assets Under Management. Give me website URLs, and if possible an email to reach them out.',
+        'Получите список крупнейших венчурных фондов США по объёму активов. Включите ссылки на сайты и, если возможно, контактные email.',
       category: 'finance',
       featured: true,
       icon: (
@@ -1226,13 +1185,13 @@ export const siteConfig = {
       ),
       image:
         'https://images.unsplash.com/photo-1444653614773-995cb1ef9efa?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2400&q=80',
-      url: 'https://www.suna.so/share/804d20a3-cf1c-4adb-83bb-0e77cc6adeac',
+      url: '',
     },
     {
       id: 'candidate-search',
-      title: 'Looking for Candidates',
+      title: 'Поиск кандидатов',
       description:
-        "Go on LinkedIn, and find me 10 profiles available - they are not working right now - for a junior software engineer position, who are located in Munich, Germany. They should have at least one bachelor's degree in Computer Science or anything related to it, and 1-year of experience in any field/role.",
+        'Найдите 10 доступных профилей для позиции Junior Software Engineer в Мюнхене, Германия, с высшим образованием в IT и минимум годом опыта.',
       category: 'recruitment',
       featured: true,
       icon: (
@@ -1268,13 +1227,13 @@ export const siteConfig = {
       ),
       image:
         'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2400&q=80',
-      url: 'https://www.suna.so/share/3ae581b0-2db8-4c63-b324-3b8d29762e74',
+      url: '',
     },
     {
       id: 'company-trip',
-      title: 'Planning Company Trip',
+      title: 'Планирование корпоративной поездки',
       description:
-        "Generate me a route plan for my company. We should go to California. We'll be in 8 people. Compose the trip from the departure (Paris, France) to the activities we can do considering that the trip will be 7 days long - departure on the 21st of Apr 2025.",
+        'Составьте маршрут поездки для компании из 8 человек в Калифорнию на 7 дней с вылетом из Парижа. Включите интересные активности.',
       category: 'travel',
       featured: true,
       icon: (
@@ -1317,13 +1276,13 @@ export const siteConfig = {
       ),
       image:
         'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2400&q=80',
-      url: 'https://www.suna.so/share/725e64a0-f1e2-4bb6-8a1f-703c2833fd72',
+      url: '',
     },
     {
       id: 'excel-spreadsheet',
-      title: 'Working on Excel',
+      title: 'Работа с Excel',
       description:
-        'My company asked me to set up an Excel spreadsheet with all the information about Italian lottery games (Lotto, 10eLotto, and Million Day). Based on that, generate and send me a spreadsheet with all the basic information (public ones).',
+        'Создайте таблицу Excel с информацией о лотереях Италии (Lotto, 10eLotto, Million Day) и отправьте готовый файл.',
       category: 'data',
       featured: true,
       icon: (
@@ -1359,13 +1318,13 @@ export const siteConfig = {
       ),
       image:
         'https://images.unsplash.com/photo-1532153975070-2e9ab71f1b14?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2400&q=80',
-      url: 'https://www.suna.so/share/128f23a4-51cd-42a6-97a0-0b458b32010e',
+      url: '',
     },
     {
       id: 'speaker-prospecting',
-      title: 'Automate Event Speaker Prospecting',
+      title: 'Автоматизация поиска спикеров',
       description:
-        "Find 20 AI ethics speakers from Europe who've spoken at conferences in the past year. Scrapes conference sites, cross-references LinkedIn and YouTube, and outputs contact info + talk summaries.",
+        'Найдите 20 спикеров по этике ИИ из Европы, выступавших на конференциях за последний год. Соберите контакты и краткие описания докладов.',
       category: 'research',
       featured: true,
       icon: (
@@ -1401,13 +1360,13 @@ export const siteConfig = {
       ),
       image:
         'https://images.unsplash.com/photo-1523580494863-6f3031224c94?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2400&q=80',
-      url: 'https://www.suna.so/share/7a7592ea-ed44-4c69-bcb5-5f9bb88c188c',
+      url: '',
     },
     {
       id: 'scientific-papers',
-      title: 'Summarize and Cross-Reference Scientific Papers',
+      title: 'Сравнение научных статей',
       description:
-        'Research and compare scientific papers talking about Alcohol effects on our bodies during the last 5 years. Generate a report about the most important scientific papers talking about the topic I wrote before.',
+        'Соберите и сравните научные статьи о влиянии алкоголя на организм за последние 5 лет. Сформируйте краткий отчет по ключевым публикациям.',
       category: 'research',
       featured: true,
       icon: (
@@ -1443,13 +1402,13 @@ export const siteConfig = {
       ),
       image:
         'https://images.unsplash.com/photo-1532153975070-2e9ab71f1b14?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2400&q=80',
-      url: 'https://www.suna.so/share/c2081b3c-786e-4e7c-9bf4-46e9b23bb662',
+      url: '',
     },
     {
       id: 'lead-generation',
-      title: 'Research + First Contact Draft',
+      title: 'Поиск клиентов и письмо',
       description:
-        'Research my potential customers (B2B) on LinkedIn. They should be in the clean tech industry. Find their websites and their email addresses. After that, based on the company profile, generate a personalized first contact email.',
+        'Найдите потенциальных B2B-клиентов в сфере чистых технологий, соберите их сайты и email, а также подготовьте персонализированное письмо для первого контакта.',
       category: 'sales',
       featured: true,
       icon: (
@@ -1485,13 +1444,13 @@ export const siteConfig = {
       ),
       image:
         'https://images.unsplash.com/photo-1552581234-26160f608093?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2400&q=80',
-      url: 'https://www.suna.so/share/6b6296a6-8683-49e5-9ad0-a32952d12c44',
+      url: '',
     },
     {
       id: 'seo-analysis',
-      title: 'SEO Analysis',
+      title: 'SEO-анализ сайта',
       description:
-        "Based on my website suna.so, generate an SEO report analysis, find top-ranking pages by keyword clusters, and identify topics I'm missing.",
+        'Сделайте SEO-анализ сайта, найдите топовые страницы по ключевым словам и определите, какие темы стоит добавить.',
       category: 'marketing',
       featured: true,
       icon: (
@@ -1534,13 +1493,13 @@ export const siteConfig = {
       ),
       image:
         'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2400&q=80',
-      url: 'https://www.suna.so/share/43491cb0-cd6c-45f0-880c-66ddc8c4b842',
+      url: '',
     },
     {
       id: 'personal-trip',
-      title: 'Generate a Personal Trip',
+      title: 'Личный маршрут путешествия',
       description:
-        'Generate a personal trip to London, with departure from Bangkok on the 1st of May. The trip will last 10 days. Find an accommodation in the center of London, with a rating on Google reviews of at least 4.5.',
+        'Составьте маршрут путешествия в Лондон с вылетом из Бангкока на 10 дней. Найдите отель в центре с рейтингом не ниже 4.5.',
       category: 'travel',
       featured: true,
       icon: (
@@ -1583,13 +1542,13 @@ export const siteConfig = {
       ),
       image:
         'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2400&q=80',
-      url: 'https://www.suna.so/share/37b31907-8349-4f63-b0e5-27ca597ed02a',
+      url: '',
     },
     {
       id: 'funded-startups',
-      title: 'Recently Funded Startups',
+      title: 'Стартапы с недавним финансированием',
       description:
-        'Go on Crunchbase, Dealroom, and TechCrunch, filter by Series A funding rounds in the SaaS Finance Space, and build a report with company data, founders, and contact info for outbound sales.',
+        'Соберите данные о стартапах, получивших финансирование на стадии Series A в сфере SaaS/финансов, с контактами основателей для продаж.',
       category: 'finance',
       featured: true,
       icon: (
@@ -1618,13 +1577,13 @@ export const siteConfig = {
       ),
       image:
         'https://images.unsplash.com/photo-1444653614773-995cb1ef9efa?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2400&q=80',
-      url: 'https://www.suna.so/share/8b2a897e-985a-4d5e-867b-15239274f764',
+      url: '',
     },
     {
       id: 'scrape-forums',
-      title: 'Scrape Forum Discussions',
+      title: 'Поиск отзывов на форумах',
       description:
-        'I need to find the best beauty centers in Rome, but I want to find them by using open forums that speak about this topic. Go on Google, and scrape the forums by looking for beauty center discussions located in Rome.',
+        'Найдите лучшие бьюти-центры в Риме, анализируя обсуждения на открытых форумах и собирая реальные отзывы.',
       category: 'research',
       featured: true,
       icon: (
@@ -1660,7 +1619,7 @@ export const siteConfig = {
       ),
       image:
         'https://images.unsplash.com/photo-1523580494863-6f3031224c94?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2400&q=80',
-      url: 'https://www.suna.so/share/7d7a5d93-a20d-48b0-82cc-e9a876e9fd04',
+      url: '',
     },
   ],
 };
