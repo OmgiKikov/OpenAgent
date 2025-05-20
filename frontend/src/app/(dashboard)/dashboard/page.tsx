@@ -197,10 +197,10 @@ function DashboardContent() {
                 onClick={() => setOpenMobile(true)}
               >
                 <Menu className="h-4 w-4" />
-                <span className="sr-only">Open menu</span>
+                <span className="sr-only">Открыть меню</span>
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Open menu</TooltipContent>
+            <TooltipContent>Открыть меню</TooltipContent>
           </Tooltip>
         </div>
       )}
@@ -208,10 +208,10 @@ function DashboardContent() {
       <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[650px] max-w-[90%]">
         <div className="flex flex-col items-center text-center mb-2 w-full">
           <h1 className={cn('tracking-tight text-4xl font-semibold leading-tight')}>
-            Hey
+            Привет
           </h1>
           <p className="tracking-tight text-3xl font-normal text-muted-foreground/80 mt-2 flex items-center gap-2">
-            What would you like OpenAgent to do today?
+            Что бы вы хотели, чтобы OpenAgent сделал сегодня?
           </p>
         </div>
 

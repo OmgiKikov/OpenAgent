@@ -70,7 +70,7 @@ export default function AgentsPage() {
       <div className="space-y-6">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
+          <AlertTitle>Ошибка</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       </div>
@@ -81,15 +81,15 @@ export default function AgentsPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Your Agents</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Ваши агенты</h1>
           <p className="text-muted-foreground mt-2">
-            Create and manage your AI agents
+            Создавайте и управляйте своими AI агентами
           </p>
         </div>
         <Button asChild>
           <Link href="/agents/new">
             <PlusCircle className="mr-2 h-4 w-4" />
-            New Agent
+            Новый агент
           </Link>
         </Button>
       </div>
@@ -114,13 +114,12 @@ export default function AgentsPage() {
           <MessagesSquare className="h-12 w-12 text-muted-foreground mb-4" />
           <h2 className="text-xl font-semibold mb-2">No agents yet</h2>
           <p className="text-muted-foreground max-w-md mb-4">
-            Create your first agent to start automating tasks and getting help
-            from AI.
+            Создайте своего первого агента, чтобы начать автоматизировать задачи и получать помощь от AI.
           </p>
           <Button asChild>
             <Link href="/agents/new">
               <PlusCircle className="mr-2 h-4 w-4" />
-              Create your first agent
+              Создайте своего первого агента
             </Link>
           </Button>
         </div>
@@ -148,7 +147,7 @@ export default function AgentsPage() {
                           : `/dashboard`
                       }
                     >
-                      Continue Conversation
+                      Продолжить разговор
                     </Link>
                   </Button>
                 </div>

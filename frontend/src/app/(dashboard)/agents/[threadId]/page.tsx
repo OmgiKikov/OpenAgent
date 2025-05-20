@@ -605,7 +605,7 @@ export default function ThreadPage({
       return (
         <div className="space-y-1">
           <div className="text-xs font-medium text-muted-foreground">
-            Assistant Message
+            Сообщение ассистента
           </div>
           <div className="rounded-md border bg-muted/50 p-3">
             <div className="text-xs prose prose-xs dark:prose-invert chat-markdown max-w-none">{assistantContent}</div>
@@ -625,7 +625,7 @@ export default function ThreadPage({
         <div className="space-y-1">
           <div className="flex justify-between items-center">
             <div className="text-xs font-medium text-muted-foreground">
-              Tool Result
+              Результат инструкции
             </div>
             <div
               className={`px-2 py-0.5 rounded-full text-xs ${isSuccess
@@ -633,7 +633,7 @@ export default function ThreadPage({
                 : 'bg-red-50 text-red-700 dark:bg-red-900 dark:text-red-300'
                 }`}
             >
-              {isSuccess ? 'Success' : 'Failed'}
+              {isSuccess ? 'Успешно' : 'Неудачно'}
             </div>
           </div>
           <div className="rounded-md border bg-muted/50 p-3">
