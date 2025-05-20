@@ -103,7 +103,7 @@ def setup_logger(name: str = "agentpress") -> logging.Logger:
         if config.ENV_MODE == EnvMode.PRODUCTION:
             console_handler.setLevel(logging.WARNING)
         else:
-            console_handler.setLevel(logging.DEBUG)
+            console_handler.setLevel(logging.INFO)
 
         console_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
         console_handler.setFormatter(console_formatter)
