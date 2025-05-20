@@ -75,9 +75,9 @@ export function UseCasesSection() {
                     <img
                       src={
                         useCase.image ||
-                        `https://placehold.co/800x400/f5f5f5/666666?text=Suna+${useCase.title.split(' ').join('+')}`
+                        `https://placehold.co/800x400/f5f5f5/666666?text=OpenAgent+${useCase.title.split(' ').join('+')}`
                       }
-                      alt={`Suna ${useCase.title}`}
+                      alt={`OpenAgent ${useCase.title}`}
                       className="w-full h-full object-cover"
                     />
                     <a

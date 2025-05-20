@@ -92,15 +92,15 @@ export default function NotFound() {
 
         <div className="relative z-10 max-w-3xl mx-auto h-full w-full flex flex-col gap-10 items-center justify-center">
           <div className="inline-flex h-10 w-fit items-center justify-center gap-2 rounded-full bg-secondary/10 text-secondary px-4">
-            <span className="text-sm font-medium">404 Error</span>
+            <span className="text-sm font-medium">404 Ошибка</span>
           </div>
 
           <div className="flex flex-col items-center justify-center gap-5">
             <h1 className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-medium tracking-tighter text-balance text-center text-primary">
-              Page not found
+              Страница не найдена
             </h1>
             <p className="text-base md:text-lg text-center text-muted-foreground font-medium text-balance leading-relaxed tracking-tight">
-              The page you're looking for doesn't exist or has been moved.
+              Страницу, которую вы ищете, не существует или была перемещена.
             </p>
           </div>
           <div className="flex items-center w-full max-w-xl gap-2 flex-wrap justify-center">
@@ -109,7 +109,7 @@ export default function NotFound() {
               className="inline-flex h-12 md:h-14 items-center justify-center gap-2 rounded-full bg-primary text-white px-6 shadow-md hover:bg-primary/90 transition-all duration-200"
             >
               <ArrowLeft className="size-4 md:size-5 dark:text-black" />
-              <span className="font-medium dark:text-black">Return Home</span>
+              <span className="font-medium dark:text-black">Вернуться на главную</span>
             </Link>
           </div>
 

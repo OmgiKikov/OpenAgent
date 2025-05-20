@@ -213,13 +213,13 @@ export function HeroSection() {
       // Call your authentication function here
 
       // Return any error state
-      return { message: 'Invalid credentials' };
+      return { message: 'Произошла ошибка при входе' };
     } catch (error) {
-      console.error('Sign in error:', error);
+      console.error('Ошибка входа:', error);
       setAuthError(
         error instanceof Error ? error.message : 'An error occurred',
       );
-      return { message: 'An error occurred during sign in' };
+      return { message: 'Произошла ошибка при входе' };
     }
   };
 
@@ -374,7 +374,7 @@ export function HeroSection() {
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle className="text-xl font-medium">
-                Sign in to continue
+                Войдите, чтобы продолжить
               </DialogTitle>
               {/* <button 
                 onClick={() => setAuthDialogOpen(false)}
@@ -384,7 +384,7 @@ export function HeroSection() {
               </button> */}
             </div>
             <DialogDescription className="text-muted-foreground">
-              Sign in or create an account to talk with Suna
+              Войдите или создайте аккаунт, чтобы общаться с OpenAgent
             </DialogDescription>
           </DialogHeader>
 
@@ -443,7 +443,7 @@ export function HeroSection() {
                 className="w-full h-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-md"
                 pendingText="Signing in..."
               >
-                Sign in
+                Войти
               </SubmitButton>
 
               <Link
@@ -451,7 +451,7 @@ export function HeroSection() {
                 className="flex h-12 items-center justify-center w-full text-center rounded-full border border-border bg-background hover:bg-accent/20 transition-all"
                 onClick={() => setAuthDialogOpen(false)}
               >
-                Create new account
+                Создать новый аккаунт
               </Link>
             </div>
 
@@ -461,15 +461,15 @@ export function HeroSection() {
                 className="text-sm text-primary hover:underline"
                 onClick={() => setAuthDialogOpen(false)}
               >
-                More sign in options
+                Другие способы входа
               </Link>
             </div>
           </form>
 
           <div className="mt-4 text-center text-xs text-muted-foreground">
-            By continuing, you agree to our{' '}
+            Продолжая, вы соглашаетесь с нашими{' '}
             <Link href="/terms" className="text-primary hover:underline">
-              Terms of Service
+              Условиями использования
             </Link>{' '}
             and{' '}
             <Link href="/privacy" className="text-primary hover:underline">

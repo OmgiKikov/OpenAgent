@@ -4,7 +4,7 @@ import { useSubscription } from '@/hooks/react-query/subscriptions/use-subscript
 import { useState, useEffect } from 'react';
 import { isLocalMode } from '@/lib/config';
 
-export const STORAGE_KEY_MODEL = 'suna-preferred-model';
+export const STORAGE_KEY_MODEL = 'OpenAgent-preferred-model';
 export const DEFAULT_FREE_MODEL_ID = 'deepseek';
 export const DEFAULT_PREMIUM_MODEL_ID = 'sonnet-3.7';
 

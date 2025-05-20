@@ -285,5 +285,5 @@ The Docker Compose setup includes a Redis service that will be used by the backe
 
 ## License
 
-Kortix Suna is licensed under the Apache License, Version 2.0. See [LICENSE](./LICENSE) for the full license text.
+OpenAgent is licensed under the Apache License, Version 2.0. See [LICENSE](./LICENSE) for the full license text.
 

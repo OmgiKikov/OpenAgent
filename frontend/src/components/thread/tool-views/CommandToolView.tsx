@@ -55,7 +55,7 @@ export function CommandToolView({
 
   // Clean the command by removing any leading/trailing whitespace and newlines
   const command = rawCommand
-    ?.replace(/^suna@computer:~\$\s*/g, '') // Remove prompt prefix
+    ?.replace(/^OpenAgent@computer:~\$\s*/g, '') // Remove prompt prefix
     ?.replace(/\\n/g, '') // Remove escaped newlines
     ?.replace(/\n/g, '') // Remove actual newlines
     ?.trim(); // Clean up any remaining whitespace
@@ -150,7 +150,7 @@ export function CommandToolView({
                 <div className="space-y-2">
                   <div className="flex items-start">
                     <span className="text-emerald-400 shrink-0 mr-2">
-                      suna@computer:~$
+                      OpenAgent@computer:~$
                     </span>
                     <span className="text-zinc-300">{command}</span>
                   </div>
@@ -161,7 +161,7 @@ export function CommandToolView({
 
                   {isSuccess && (
                     <div className="text-emerald-400 mt-1">
-                      suna@computer:~$ _
+                      OpenAgent@computer:~$ _
                     </div>
                   )}
                 </div>
@@ -171,7 +171,7 @@ export function CommandToolView({
                 <div className="space-y-2">
                   <div className="flex items-start">
                     <span className="text-emerald-400 shrink-0 mr-2">
-                      suna@computer:~$
+                      OpenAgent@computer:~$
                     </span>
                     <span className="text-zinc-300">{command}</span>
                   </div>
@@ -184,7 +184,7 @@ export function CommandToolView({
               {!command && !output && !isStreaming && (
                 <div className="flex items-start">
                   <span className="text-emerald-400 shrink-0 mr-2">
-                    suna@computer:~$
+                    OpenAgent@computer:~$
                   </span>
                   <span className="w-2 h-4 bg-zinc-500 animate-pulse"></span>
                 </div>
@@ -194,7 +194,7 @@ export function CommandToolView({
                 <div className="space-y-2">
                   <div className="flex items-start">
                     <span className="text-emerald-400 shrink-0 mr-2">
-                      suna@computer:~$
+                      OpenAgent@computer:~$
                     </span>
                     <span className="text-zinc-300">
                       {command || 'running command...'}
