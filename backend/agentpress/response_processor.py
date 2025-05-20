@@ -481,7 +481,9 @@ class ResponseProcessor:
 
             # --- SAVE and YIELD Final Assistant Message ---
             complete_native_tool_calls = []
-            if streaming_state.accumulated_content:
+            if streaming_state.accumulated_content or (
+                config.native_tool_calling and streaming_state.tool_calls_buffer
+            ):
                 # ... (Truncate accumulated_content logic) ...
                 if (
                     config.max_tool_calls > 0
