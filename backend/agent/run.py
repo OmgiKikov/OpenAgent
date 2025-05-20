@@ -290,7 +290,7 @@ async def get_generator_for_response(
 
 
 def detect_native_tool_usage_from_chunk_content(chunk_content: Dict[str, Any]) -> Optional[str]:
-    tool_calls = chunk_content.get("tool_calls", [])
+    tool_calls = chunk_content.get("tool_calls") or []
     for tool_call in tool_calls:
         if tool_call.get("type") == "function":
             return tool_call.get("function", {}).get("name")
