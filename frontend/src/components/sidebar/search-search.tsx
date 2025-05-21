@@ -268,7 +268,7 @@ export function SidebarSearch() {
           <SidebarMenuItem>
             <SidebarMenuButton className="text-sidebar-foreground/70">
               <FileText className="h-4 w-4" />
-              <span>{query ? 'No results found' : 'No agents yet'}</span>
+              <span>{query ? 'Ничего не найдено' : 'Еще нет агентов'}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         )}

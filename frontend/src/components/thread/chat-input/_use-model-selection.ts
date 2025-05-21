@@ -18,17 +18,17 @@ export interface ModelOption {
 }
 
 export const MODEL_OPTIONS: ModelOption[] = [
-  { 
-    id: 'deepseek', 
-    label: 'Free', 
-    requiresSubscription: false,
-    description: 'Limited capabilities. Upgrade for full performance.'
-  },
+  // { 
+  //   id: 'deepseek', 
+  //   label: 'Free', 
+  //   requiresSubscription: false,
+  //   description: 'Limited capabilities. Upgrade for full performance.'
+  // },
   { 
     id: 'sonnet-3.7', 
-    label: 'Standard', 
+    label: 'Стандартный режим', 
     requiresSubscription: true, 
-    description: 'Excellent for complex tasks and nuanced conversations'
+    description: 'Отлично подходит для сложных задач и тонких разговоров'
   },
 ];
 

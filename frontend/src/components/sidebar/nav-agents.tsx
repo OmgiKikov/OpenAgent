@@ -286,10 +286,10 @@ export function NavAgents() {
                 className="text-muted-foreground hover:text-foreground h-8 w-8 flex items-center justify-center rounded-md"
               >
                 <Plus className="h-4 w-4" />
-                <span className="sr-only">New Agent</span>
+                <span className="sr-only">Новый агент</span>
               </Link>
             </TooltipTrigger>
-            <TooltipContent>New Agent</TooltipContent>
+            <TooltipContent>Новый агент</TooltipContent>
           </Tooltip>
         ) : null}
       </div>
@@ -302,11 +302,11 @@ export function NavAgents() {
                 <SidebarMenuButton asChild>
                   <Link href="/dashboard" className="flex items-center">
                     <Plus className="h-4 w-4" />
-                    <span>New Agent</span>
+                    <span>Новый агент</span>
                   </Link>
                 </SidebarMenuButton>
               </TooltipTrigger>
-              <TooltipContent>New Agent</TooltipContent>
+              <TooltipContent>Новый агент</TooltipContent>
             </Tooltip>
           </SidebarMenuItem>
         )}
@@ -435,7 +435,7 @@ export function NavAgents() {
           <SidebarMenuItem>
             <SidebarMenuButton className="text-sidebar-foreground/70">
               <MessagesSquare className="h-4 w-4" />
-              <span>No agents yet</span>
+              <span>Еще нет агентов</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         )}

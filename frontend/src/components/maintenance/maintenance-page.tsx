@@ -44,20 +44,19 @@ export function MaintenancePage() {
           </div>
 
           <h1 className="text-3xl font-bold tracking-tight">
-            System Maintenance
+            Техническое обслуживание
           </h1>
 
           <p className="text-muted-foreground">
-            We're currently performing maintenance on our systems. Our team is
-            working to get everything back up and running as soon as possible.
+            В настоящее время мы проводим техническое обслуживание наших систем. Наша команда 
+            работает над тем, чтобы всё заработало как можно скорее.
           </p>
 
           <Alert className="mt-6">
-            <AlertTitle>Agent Executions Stopped</AlertTitle>
+            <AlertTitle>Выполнение агентов приостановлено</AlertTitle>
             <AlertDescription>
-              Any running agent executions have been stopped during maintenance.
-              You'll need to manually continue these executions once the system
-              is back online.
+              Все запущенные агенты были остановлены на время технического обслуживания.
+              Вам потребуется вручную возобновить их работу после восстановления системы.
             </AlertDescription>
           </Alert>
         </div>
@@ -71,12 +70,12 @@ export function MaintenancePage() {
             <RefreshCw
               className={cn('mr-2 h-4 w-4', isCheckingHealth && 'animate-spin')}
             />
-            {isCheckingHealth ? 'Checking...' : 'Check Again'}
+            {isCheckingHealth ? 'Проверка...' : 'Проверить снова'}
           </Button>
 
           {lastChecked && (
             <p className="text-sm text-muted-foreground">
-              Last checked: {lastChecked.toLocaleTimeString()}
+              Последняя проверка: {lastChecked.toLocaleTimeString()}
             </p>
           )}
         </div>

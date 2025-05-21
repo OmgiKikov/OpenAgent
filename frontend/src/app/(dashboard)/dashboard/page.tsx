@@ -219,7 +219,7 @@ function DashboardContent() {
           ref={chatInputRef}
           onSubmit={handleSubmit}
           loading={isSubmitting}
-          placeholder="Describe what you need help with..."
+          placeholder="Опишите, с чем вам нужна помощь..."
           value={inputValue}
           onChange={setInputValue}
           hideAttachments={false}
