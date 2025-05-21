@@ -508,7 +508,7 @@ export default function ThreadPage({
               // Note: currentUsage and limit might not be in the detail from the backend yet
               currentUsage: error.detail.currentUsage as number | undefined,
               limit: error.detail.limit as number | undefined,
-              message: error.detail.message || 'Monthly usage limit reached. Please upgrade.', // Use message from error detail
+              message: error.detail.message || 'Достигнут месячный лимит использования. Пожалуйста, обновите план.', // Use message from error detail
               accountId: project?.account_id || null // Pass account ID
             });
             setShowBillingAlert(true);
@@ -997,7 +997,7 @@ export default function ThreadPage({
         setBillingData({
           currentUsage: result.subscription?.minutes_limit || 0,
           limit: result.subscription?.minutes_limit || 0,
-          message: result.message || 'Usage limit reached',
+          message: result.message || 'Достигнут лимит использования',
           accountId: project?.account_id || null,
         });
         setShowBillingAlert(true);
@@ -1076,13 +1076,13 @@ export default function ThreadPage({
                 <AlertTriangle className="h-6 w-6 text-destructive" />
               </div>
               <h2 className="text-lg font-semibold text-destructive">
-                Thread Not Found
+                Чат не найден
               </h2>
               <p className="text-sm text-muted-foreground">
                 {error.includes(
                   'JSON object requested, multiple (or no) rows returned',
                 )
-                  ? 'This thread either does not exist or you do not have access to it.'
+                  ? 'Этот чат либо не существует, либо у вас нет к нему доступа.'
                   : error
                 }
               </p >
@@ -1136,7 +1136,7 @@ export default function ThreadPage({
         {/* Render debug mode indicator when active */}
         {debugMode && (
           <div className="fixed top-16 right-4 bg-amber-500 text-black text-xs px-2 py-1 rounded-md shadow-md z-50">
-            Debug Mode
+            Режим отладки
           </div>
         )}
         <div
@@ -1183,7 +1183,7 @@ export default function ThreadPage({
                 value={newMessage}
                 onChange={setNewMessage}
                 onSubmit={handleSubmitMessage}
-                placeholder="Ask OpenAgent anything..."
+                placeholder="Спросите OpenAgent о чем угодно..."
                 loading={isSending}
                 disabled={isSending || agentStatus === 'running' || agentStatus === 'connecting'}
                 isAgentRunning={agentStatus === 'running' || agentStatus === 'connecting'}

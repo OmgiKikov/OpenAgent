@@ -341,7 +341,7 @@ export function FileAttachment({
                                 />
                             ) : (
                                 <div className="p-4 text-muted-foreground">
-                                    No preview available for this file type
+                                    Предварительный просмотр недоступен для этого типа файла
                                 </div>
                             )}
                         </>
@@ -350,11 +350,11 @@ export function FileAttachment({
                     {/* Error state */}
                     {hasError && (
                         <div className="h-full w-full flex flex-col items-center justify-center p-4">
-                            <div className="text-red-500 mb-2">Error loading content</div>
+                            <div className="text-red-500 mb-2">Ошибка загрузки содержимого</div>
                             <div className="text-muted-foreground text-sm text-center mb-2">
                                 {fileUrl && (
                                     <div className="text-xs max-w-full overflow-hidden truncate opacity-70">
-                                        Path may need /workspace prefix
+                                        Путь может потребовать префикса /workspace
                                     </div>
                                 )}
                             </div>
@@ -362,7 +362,7 @@ export function FileAttachment({
                                 onClick={handleClick}
                                 className="px-3 py-1.5 bg-primary/10 hover:bg-primary/20 rounded-md text-sm"
                             >
-                                Open in viewer
+                                Открыть в просмотрщике
                             </button>
                         </div>
                     )}
@@ -378,10 +378,10 @@ export function FileAttachment({
                     {!fileContent && !fileContentLoading && !hasError && (
                         <div className="h-full w-full flex flex-col items-center justify-center p-4 pointer-events-none">
                             <div className="text-muted-foreground text-sm mb-2">
-                                Preview available
+                                Предварительный просмотр доступен
                             </div>
                             <div className="text-muted-foreground text-xs text-center">
-                                Click header to open externally
+                                Нажмите на заголовок, чтобы открыть в браузере
                             </div>
                         </div>
                     )}

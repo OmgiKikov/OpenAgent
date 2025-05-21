@@ -217,11 +217,11 @@ export const FileUploadHandler = forwardRef<
                 ) : (
                   <Paperclip className="h-4 w-4" />
                 )}
-                <span className="text-sm">Attachments</span>
+                <span className="text-sm">Вложения</span>
               </Button>
             </TooltipTrigger>
             <TooltipContent side="top">
-              <p>Attach files</p>
+              <p>Прикрепить файлы</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>

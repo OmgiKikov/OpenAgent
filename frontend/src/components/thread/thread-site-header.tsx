@@ -77,7 +77,7 @@ export function SiteHeader({
     if (editName !== projectName) {
       try {
         if (!projectId) {
-          toast.error('Cannot rename: Project ID is missing');
+          toast.error('Невозможно переименовать: отсутствует ID проекта');
           setEditName(projectName);
           setIsEditing(false);
           return;
@@ -86,14 +86,14 @@ export function SiteHeader({
         const updatedProject = await updateProject(projectId, { name: editName })
         if (updatedProject) {
           onProjectRenamed?.(editName);
-          toast.success('Project renamed successfully');
+          toast.success('Проект успешно переименован');
         } else {
-          throw new Error('Failed to update project');
+          throw new Error('Не удалось обновить проект');
         }
       } catch (error) {
         const errorMessage =
-          error instanceof Error ? error.message : 'Failed to rename project';
-        console.error('Failed to rename project:', errorMessage);
+          error instanceof Error ? error.message : 'Не удалось переименовать проект';
+        console.error('Не удалось переименовать проект:', errorMessage);
         toast.error(errorMessage);
         setEditName(projectName);
       }
@@ -122,7 +122,7 @@ export function SiteHeader({
             size="icon"
             onClick={() => setOpenMobile(true)}
             className="h-9 w-9 mr-1"
-            aria-label="Open sidebar"
+            aria-label="Открыть боковую панель"
           >
             <Menu className="h-4 w-4" />
           </Button>
@@ -174,7 +174,7 @@ export function SiteHeader({
           {/* Debug mode indicator */}
           {debugMode && (
             <div className="bg-amber-500 text-black text-xs px-2 py-0.5 rounded-md mr-2">
-              Debug
+              Отладка
             </div>
           )}
 
@@ -185,7 +185,7 @@ export function SiteHeader({
               size="icon"
               onClick={onToggleSidePanel}
               className="h-9 w-9 cursor-pointer"
-              aria-label="Toggle computer panel"
+              aria-label="Переключить панель компьютера"
             >
               <PanelRightOpen className="h-4 w-4" />
             </Button>
@@ -204,7 +204,7 @@ export function SiteHeader({
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>View Files in Task</p>
+                  <p>Просмотр файлов в задаче</p>
                 </TooltipContent>
               </Tooltip>
 
@@ -220,7 +220,7 @@ export function SiteHeader({
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Share Chat</p>
+                  <p>Поделиться чатом</p>
                 </TooltipContent>
               </Tooltip>
 
@@ -236,7 +236,7 @@ export function SiteHeader({
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Toggle Computer Preview (CMD+I)</p>
+                  <p>Переключить предпросмотр компьютера (CMD+I)</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

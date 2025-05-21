@@ -112,7 +112,7 @@ export default function AgentsPage() {
       ) : agents.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-8 text-center border rounded-md">
           <MessagesSquare className="h-12 w-12 text-muted-foreground mb-4" />
-          <h2 className="text-xl font-semibold mb-2">No agents yet</h2>
+          <h2 className="text-xl font-semibold mb-2">Еще нет агентов</h2>
           <p className="text-muted-foreground max-w-md mb-4">
             Создайте своего первого агента, чтобы начать автоматизировать задачи и получать помощь от AI.
           </p>
