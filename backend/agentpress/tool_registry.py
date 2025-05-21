@@ -58,12 +58,14 @@ class ToolRegistry:
             if function_names is None or func_name in function_names:
                 for schema in schema_list:
                     if schema.schema_type == SchemaType.OPENAPI:
-                        self.tools[func_name] = {
+                        tool_name = schema.schema["function"]["name"]
+                        self.tools[tool_name] = {
                             "instance": tool_instance,
+                            "method": func_name,
                             "schema": schema,
                         }
                         registered_openapi += 1
-                        logger.debug(f"Registered OpenAPI function {func_name} from {tool_class.__name__}")
+                        logger.debug(f"Registered OpenAPI tool {tool_name} -> {func_name} from {tool_class.__name__}")
 
                     if schema.schema_type == SchemaType.XML and schema.xml_schema:
                         self.xml_tools[schema.xml_schema.tag_name] = {
@@ -90,10 +92,7 @@ class ToolRegistry:
 
         # Get OpenAPI tool functions
         for tool_name, tool_info in self.tools.items():
-            tool_instance = tool_info["instance"]
-            function_name = tool_name
-            function = getattr(tool_instance, function_name)
-            available_functions[function_name] = function
+            available_functions[tool_name] = getattr(tool_info["instance"], tool_info["method"])
 
         # Get XML tool functions
         for tag_name, tool_info in self.xml_tools.items():

@@ -136,7 +136,7 @@ class ComputerUseTool(SandboxToolsBase):
         {
             "type": "function",
             "function": {
-                "name": "move_to",
+                "name": "move-to",
                 "description": "Move cursor to specified position",
                 "parameters": {
                     "type": "object",
@@ -455,7 +455,7 @@ class ComputerUseTool(SandboxToolsBase):
         {
             "type": "function",
             "function": {
-                "name": "mouse_down",
+                "name": "mouse-down",
                 "description": "Press a mouse button",
                 "parameters": {
                     "type": "object",
@@ -515,7 +515,7 @@ class ComputerUseTool(SandboxToolsBase):
         {
             "type": "function",
             "function": {
-                "name": "mouse_up",
+                "name": "mouse-up",
                 "description": "Release a mouse button",
                 "parameters": {
                     "type": "object",
@@ -573,7 +573,7 @@ class ComputerUseTool(SandboxToolsBase):
         {
             "type": "function",
             "function": {
-                "name": "drag_to",
+                "name": "drag-to",
                 "description": "Drag cursor to specified position",
                 "parameters": {
                     "type": "object",

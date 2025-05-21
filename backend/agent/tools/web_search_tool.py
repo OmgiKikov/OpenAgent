@@ -38,7 +38,7 @@ class SandboxWebSearchTool(SandboxToolsBase):
         {
             "type": "function",
             "function": {
-                "name": "web_search",
+                "name": "web-search",
                 "description": "Search the web for up-to-date information on a specific topic using the Tavily API. This tool allows you to gather real-time information from the internet to answer user queries, research topics, validate facts, and find recent developments. Results include titles, URLs, and publication dates. Use this tool for discovering relevant web pages before potentially crawling them for complete content.",
                 "parameters": {
                     "type": "object",
@@ -144,7 +144,7 @@ class SandboxWebSearchTool(SandboxToolsBase):
         {
             "type": "function",
             "function": {
-                "name": "scrape_webpage",
+                "name": "scrape-webpage",
                 "description": "Extract full text content from multiple webpages in a single operation. IMPORTANT: You should ALWAYS collect multiple relevant URLs from web-search results and scrape them all in a single call for efficiency. This tool saves time by processing multiple pages simultaneously rather than one at a time. The extracted text includes the main content of each page without HTML markup.",
                 "parameters": {
                     "type": "object",

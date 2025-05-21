@@ -32,7 +32,7 @@ class SandboxVisionTool(SandboxToolsBase):
         {
             "type": "function",
             "function": {
-                "name": "see_image",
+                "name": "see-image",
                 "description": "Allows the agent to 'see' an image file located in the /workspace directory. Provide the relative path to the image. The image content will be made available in the next turn's context.",
                 "parameters": {
                     "type": "object",

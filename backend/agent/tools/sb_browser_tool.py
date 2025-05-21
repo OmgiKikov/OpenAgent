@@ -108,7 +108,7 @@ class SandboxBrowserTool(SandboxToolsBase):
         {
             "type": "function",
             "function": {
-                "name": "browser_navigate_to",
+                "name": "browser-navigate-to",
                 "description": "Navigate to a specific url",
                 "parameters": {
                     "type": "object",
@@ -146,7 +146,7 @@ class SandboxBrowserTool(SandboxToolsBase):
     # @openapi_schema({
     #     "type": "function",
     #     "function": {
-    #         "name": "browser_search_google",
+    #         "name": "browser-search-google",
     #         "description": "Search Google with the provided query",
     #         "parameters": {
     #             "type": "object",
@@ -187,7 +187,7 @@ class SandboxBrowserTool(SandboxToolsBase):
         {
             "type": "function",
             "function": {
-                "name": "browser_go_back",
+                "name": "browser-go-back",
                 "description": "Navigate back in browser history",
                 "parameters": {"type": "object", "properties": {}},
             },
@@ -213,7 +213,7 @@ class SandboxBrowserTool(SandboxToolsBase):
         {
             "type": "function",
             "function": {
-                "name": "browser_wait",
+                "name": "browser-wait",
                 "description": "Wait for the specified number of seconds",
                 "parameters": {
                     "type": "object",
@@ -252,7 +252,7 @@ class SandboxBrowserTool(SandboxToolsBase):
         {
             "type": "function",
             "function": {
-                "name": "browser_click_element",
+                "name": "browser-click-element",
                 "description": "Click on an element by index",
                 "parameters": {
                     "type": "object",
@@ -292,7 +292,7 @@ class SandboxBrowserTool(SandboxToolsBase):
         {
             "type": "function",
             "function": {
-                "name": "browser_input_text",
+                "name": "browser-input-text",
                 "description": "Input text into an element",
                 "parameters": {
                     "type": "object",
@@ -337,7 +337,7 @@ class SandboxBrowserTool(SandboxToolsBase):
         {
             "type": "function",
             "function": {
-                "name": "browser_send_keys",
+                "name": "browser-send-keys",
                 "description": "Send keyboard keys such as Enter, Escape, or keyboard shortcuts",
                 "parameters": {
                     "type": "object",
@@ -377,7 +377,7 @@ class SandboxBrowserTool(SandboxToolsBase):
         {
             "type": "function",
             "function": {
-                "name": "browser_switch_tab",
+                "name": "browser-switch-tab",
                 "description": "Switch to a different browser tab",
                 "parameters": {
                     "type": "object",
@@ -416,7 +416,7 @@ class SandboxBrowserTool(SandboxToolsBase):
     # @openapi_schema({
     #     "type": "function",
     #     "function": {
-    #         "name": "browser_open_tab",
+    #         "name": "browser-open-tab",
     #         "description": "Open a new browser tab with the specified URL",
     #         "parameters": {
     #             "type": "object",
@@ -457,7 +457,7 @@ class SandboxBrowserTool(SandboxToolsBase):
         {
             "type": "function",
             "function": {
-                "name": "browser_close_tab",
+                "name": "browser-close-tab",
                 "description": "Close a browser tab",
                 "parameters": {
                     "type": "object",
@@ -496,7 +496,7 @@ class SandboxBrowserTool(SandboxToolsBase):
     # @openapi_schema({
     #     "type": "function",
     #     "function": {
-    #         "name": "browser_extract_content",
+    #         "name": "browser-extract-content",
     #         "description": "Extract content from the current page based on the provided goal",
     #         "parameters": {
     #             "type": "object",
@@ -556,7 +556,7 @@ class SandboxBrowserTool(SandboxToolsBase):
         {
             "type": "function",
             "function": {
-                "name": "browser_scroll_down",
+                "name": "browser-scroll-down",
                 "description": "Scroll down the page",
                 "parameters": {
                     "type": "object",
@@ -601,7 +601,7 @@ class SandboxBrowserTool(SandboxToolsBase):
         {
             "type": "function",
             "function": {
-                "name": "browser_scroll_up",
+                "name": "browser-scroll-up",
                 "description": "Scroll up the page",
                 "parameters": {
                     "type": "object",
@@ -646,7 +646,7 @@ class SandboxBrowserTool(SandboxToolsBase):
         {
             "type": "function",
             "function": {
-                "name": "browser_scroll_to_text",
+                "name": "browser-scroll-to-text",
                 "description": "Scroll to specific text on the page",
                 "parameters": {
                     "type": "object",
@@ -686,7 +686,7 @@ class SandboxBrowserTool(SandboxToolsBase):
         {
             "type": "function",
             "function": {
-                "name": "browser_get_dropdown_options",
+                "name": "browser-get-dropdown-options",
                 "description": "Get all options from a dropdown element",
                 "parameters": {
                     "type": "object",
@@ -726,7 +726,7 @@ class SandboxBrowserTool(SandboxToolsBase):
         {
             "type": "function",
             "function": {
-                "name": "browser_select_dropdown_option",
+                "name": "browser-select-dropdown-option",
                 "description": "Select an option from a dropdown by text",
                 "parameters": {
                     "type": "object",
@@ -774,7 +774,7 @@ class SandboxBrowserTool(SandboxToolsBase):
         {
             "type": "function",
             "function": {
-                "name": "browser_drag_drop",
+                "name": "browser-drag-drop",
                 "description": "Perform drag and drop operation between elements or coordinates",
                 "parameters": {
                     "type": "object",
@@ -875,7 +875,7 @@ class SandboxBrowserTool(SandboxToolsBase):
         {
             "type": "function",
             "function": {
-                "name": "browser_click_coordinates",
+                "name": "browser-click-coordinates",
                 "description": "Click at specific X,Y coordinates on the page",
                 "parameters": {
                     "type": "object",

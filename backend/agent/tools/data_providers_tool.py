@@ -26,7 +26,7 @@ class DataProvidersTool(Tool):
         {
             "type": "function",
             "function": {
-                "name": "get_data_provider_endpoints",
+                "name": "get-data-provider-endpoints",
                 "description": "Get available endpoints for a specific data provider",
                 "parameters": {
                     "type": "object",
@@ -45,7 +45,7 @@ class DataProvidersTool(Tool):
         tag_name="get-data-provider-endpoints",
         mappings=[{"param_name": "service_name", "node_type": "attribute", "path": "."}],
         example="""
-<!-- 
+<!--
 The get-data-provider-endpoints tool returns available endpoints for a specific data provider.
 Use this tool when you need to discover what endpoints are available.
 -->
@@ -85,7 +85,7 @@ Use this tool when you need to discover what endpoints are available.
         {
             "type": "function",
             "function": {
-                "name": "execute_data_provider_call",
+                "name": "execute-data-provider-call",
                 "description": "Execute a call to a specific data provider endpoint",
                 "parameters": {
                     "type": "object",
@@ -120,12 +120,12 @@ Use this tool when you need to discover what endpoints are available.
             {"param_name": "payload", "node_type": "content", "path": "."},
         ],
         example="""
-        <!-- 
+        <!--
         The execute-data-provider-call tool makes a request to a specific data provider endpoint.
         Use this tool when you need to call an data provider endpoint with specific parameters.
         The route must be a valid endpoint key obtained from get-data-provider-endpoints tool!!
         -->
-        
+
         <!-- Example to call linkedIn service with the specific route person -->
         <execute-data-provider-call service_name="linkedin" route="person">
             {"link": "https://www.linkedin.com/in/johndoe/"}

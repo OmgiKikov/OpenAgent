@@ -13,7 +13,7 @@ class SandboxExposeTool(SandboxToolsBase):
         {
             "type": "function",
             "function": {
-                "name": "expose_port",
+                "name": "expose-port",
                 "description": "Expose a port from the agent's sandbox environment to the public internet and get its preview URL. This is essential for making services running in the sandbox accessible to users, such as web applications, APIs, or other network services. The exposed URL can be shared with users to allow them to interact with the sandbox environment.",
                 "parameters": {
                     "type": "object",

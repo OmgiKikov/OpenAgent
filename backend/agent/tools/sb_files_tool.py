@@ -75,7 +75,7 @@ class SandboxFilesTool(SandboxToolsBase):
         {
             "type": "function",
             "function": {
-                "name": "create_file",
+                "name": "create-file",
                 "description": "Create a new file with the provided contents at a given path in the workspace. The path must be relative to /workspace (e.g., 'src/main.py' for /workspace/src/main.py)",
                 "parameters": {
                     "type": "object",
@@ -146,7 +146,7 @@ class SandboxFilesTool(SandboxToolsBase):
         {
             "type": "function",
             "function": {
-                "name": "str_replace",
+                "name": "str-replace",
                 "description": "Replace specific text in a file. The file path must be relative to /workspace (e.g., 'src/main.py' for /workspace/src/main.py). Use this when you need to replace a unique string that appears exactly once in the file.",
                 "parameters": {
                     "type": "object",
@@ -231,7 +231,7 @@ class SandboxFilesTool(SandboxToolsBase):
         {
             "type": "function",
             "function": {
-                "name": "full_file_rewrite",
+                "name": "full-file-rewrite",
                 "description": "Completely rewrite an existing file with new content. The file path must be relative to /workspace (e.g., 'src/main.py' for /workspace/src/main.py). Use this when you need to replace the entire file content or make extensive changes throughout the file.",
                 "parameters": {
                     "type": "object",
@@ -297,7 +297,7 @@ class SandboxFilesTool(SandboxToolsBase):
         {
             "type": "function",
             "function": {
-                "name": "delete_file",
+                "name": "delete-file",
                 "description": "Delete a file at the given path. The path must be relative to /workspace (e.g., 'src/main.py' for /workspace/src/main.py)",
                 "parameters": {
                     "type": "object",
@@ -338,7 +338,7 @@ class SandboxFilesTool(SandboxToolsBase):
     # @openapi_schema({
     #     "type": "function",
     #     "function": {
-    #         "name": "read_file",
+    #         "name": "read-file",
     #         "description": "Read and return the contents of a file. This tool is essential for verifying data, checking file contents, and analyzing information. Always use this tool to read file contents before processing or analyzing data. The file path must be relative to /workspace.",
     #         "parameters": {
     #             "type": "object",

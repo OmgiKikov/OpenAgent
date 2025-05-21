@@ -42,7 +42,7 @@ class SandboxShellTool(SandboxToolsBase):
         {
             "type": "function",
             "function": {
-                "name": "execute_command",
+                "name": "execute-command",
                 "description": "Execute a shell command in the workspace directory. IMPORTANT: Commands are non-blocking by default and run in a tmux session. This is ideal for long-running operations like starting servers or build processes. Uses sessions to maintain state between commands. This tool is essential for running CLI tools, installing packages, and managing system operations.",
                 "parameters": {
                     "type": "object",
@@ -258,7 +258,7 @@ class SandboxShellTool(SandboxToolsBase):
         {
             "type": "function",
             "function": {
-                "name": "check_command_output",
+                "name": "check-command-output",
                 "description": "Check the output of a previously executed command in a tmux session. Use this to monitor the progress or results of non-blocking commands.",
                 "parameters": {
                     "type": "object",
@@ -297,7 +297,7 @@ class SandboxShellTool(SandboxToolsBase):
         example="""
         <!-- Example 1: Check output without killing session -->
         <check-command-output session_name="dev_server"/>
-        
+
         <!-- Example 2: Check final output and kill session -->
         <check-command-output session_name="build_process" kill_session="true"/>
         """,
@@ -340,7 +340,7 @@ class SandboxShellTool(SandboxToolsBase):
         {
             "type": "function",
             "function": {
-                "name": "terminate_command",
+                "name": "terminate-command",
                 "description": "Terminate a running command by killing its tmux session.",
                 "parameters": {
                     "type": "object",
@@ -394,7 +394,7 @@ class SandboxShellTool(SandboxToolsBase):
         {
             "type": "function",
             "function": {
-                "name": "list_commands",
+                "name": "list-commands",
                 "description": "List all running tmux sessions and their status.",
                 "parameters": {"type": "object", "properties": {}},
             },
