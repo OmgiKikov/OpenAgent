@@ -9,6 +9,16 @@ export function formatTimestamp(isoString?: string): string {
   }
 }
 
+export function extractToolCall(content: any): any {
+  if (
+    !content ||
+    !Array.isArray(content.tool_calls) ||
+    content.tool_calls.length === 0 ||
+    !content.tool_calls[0].function
+  ) return null;
+  return content.tool_calls[0].function;
+}
+
 // Get standardized tool title
 export function getToolTitle(toolName: string): string {
   // Normalize tool name
@@ -292,12 +302,12 @@ export function extractSearchQuery(content: string | undefined): string | null {
   // Try parsing as JSON first
   try {
     const parsedContent = JSON.parse(content);
-    
+
     // Check if it's the new Tavily response format
     if (parsedContent.query && typeof parsedContent.query === 'string') {
       return parsedContent.query;
     }
-    
+
     // Continue with existing logic for backward compatibility
     if (typeof parsedContent.content === 'string') {
       // If the outer content is JSON and has a 'content' string field,
@@ -315,16 +325,9 @@ export function extractSearchQuery(content: string | undefined): string | null {
       ) {
         return parsedContent.arguments.query;
       }
-      if (
-        Array.isArray(parsedContent.tool_calls) &&
-        parsedContent.tool_calls.length > 0
-      ) {
-        const toolCall = parsedContent.tool_calls[0];
-        if (
-          typeof toolCall.arguments === 'object' &&
-          toolCall.arguments !== null &&
-          typeof toolCall.arguments.query === 'string'
-        ) {
+      const toolCall = extractToolCall(parsedContent);
+      if (toolCall) {
+        if (toolCall.arguments && typeof toolCall.arguments.query === 'string') {
           return toolCall.arguments.query;
         }
         if (typeof toolCall.arguments === 'string') {
@@ -508,6 +511,12 @@ export function extractCrawlUrl(content: string | undefined): string | null {
   try {
     // Try to parse content as JSON first (for the new format)
     const parsedContent = JSON.parse(content);
+    const toolCall = extractToolCall(parsedContent);
+    if (toolCall) {
+      if (toolCall.arguments && typeof toolCall.arguments.urls === 'string') {
+        return toolCall.arguments.urls;
+      }
+    }
     if (parsedContent.content) {
       // Look for URL in the content string
       const urlMatch = parsedContent.content.match(
@@ -776,7 +785,7 @@ export function extractSearchResults(
   // First check if it's the new Tavily response format
   try {
     const parsedContent = JSON.parse(content);
-    
+
     // Check if this is the new Tavily response format
     if (parsedContent.results && Array.isArray(parsedContent.results)) {
       return parsedContent.results.map(result => ({
@@ -785,7 +794,7 @@ export function extractSearchResults(
         snippet: result.content || '',
       }));
     }
-    
+
     // Continue with existing logic for backward compatibility
     if (parsedContent.content && typeof parsedContent.content === 'string') {
       // Look for a tool_result tag
