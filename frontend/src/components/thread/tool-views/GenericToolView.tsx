@@ -58,9 +58,9 @@ export function GenericToolView({
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 p-4 overflow-auto">
-        {/* Assistant Content (Input) - shown if available and not actively streaming */}
-        {assistantContent && !isStreaming && (
-          <div className="space-y-1.5 mb-4"> {/* Added mb-4 for spacing */}
+        {/* Assistant Content (Input) - shown only on error and if available */}
+        {assistantContent && !isStreaming && !isSuccess && (
+          <div className="space-y-1.5 mb-4">
             <div className="flex justify-between items-center">
               <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
                 Input
