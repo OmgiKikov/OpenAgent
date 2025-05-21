@@ -12,6 +12,7 @@ import {
   extractExitCode,
   formatTimestamp,
   getToolTitle,
+  extractToolCall,
 } from './utils';
 import { cn } from '@/lib/utils';
 
@@ -31,6 +32,12 @@ export function CommandToolView({
     try {
       // Try to parse JSON content first
       const parsed = JSON.parse(assistantContent);
+      const toolCall = extractToolCall(parsed);
+      if (toolCall) {
+        if (toolCall.arguments && typeof toolCall.arguments.command === 'string') {
+          return toolCall.arguments.command;
+        }
+      }
       if (parsed.content) {
         // Look for execute-command tag
         const commandMatch = parsed.content.match(

@@ -16,16 +16,6 @@ export function GenericToolView({
   assistantTimestamp,
   toolTimestamp,
 }: ToolViewProps) {
-  console.log('GenericToolView:', {
-    name,
-    assistantContent,
-    toolContent,
-    isSuccess,
-    isStreaming,
-    assistantTimestamp,
-    toolTimestamp,
-  });
-
   const toolTitle = getToolTitle(name);
   // const Icon = getToolIcon(name); // Icon is not used in the new layout with AppleCardLoader primarily
 
