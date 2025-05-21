@@ -675,13 +675,13 @@ export default function ThreadPage({
           } else {
             // Fallback to checking for tool_calls JSON structure
             const assistantContentParsed = safeJsonParse<{
-              tool_calls?: { name: string }[];
+              tool_calls?: { function: { name: string } }[];
             }>(assistantMsg.content, {});
             if (
               assistantContentParsed.tool_calls &&
               assistantContentParsed.tool_calls.length > 0
             ) {
-              toolName = assistantContentParsed.tool_calls[0].name || 'unknown';
+              toolName = assistantContentParsed.tool_calls[0].function.name || 'unknown';
             }
           }
         } catch { }
