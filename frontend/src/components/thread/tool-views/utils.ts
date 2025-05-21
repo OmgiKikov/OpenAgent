@@ -139,6 +139,12 @@ export function extractFilePath(content: string | undefined): string | null {
   // Try to parse JSON content first
   try {
     const parsedContent = JSON.parse(content);
+    const toolCall = extractToolCall(parsedContent);
+    if (toolCall) {
+      if (toolCall.arguments && typeof toolCall.arguments.file_path === 'string') {
+        return toolCall.arguments.file_path;
+      }
+    }
     if (parsedContent.content && typeof parsedContent.content === 'string') {
       content = parsedContent.content;
     }
@@ -207,6 +213,19 @@ export function extractStrReplaceContent(content: string | undefined): {
   newStr: string | null;
 } {
   if (!content) return { oldStr: null, newStr: null };
+  const toolCall = extractToolCall(content);
+  if (toolCall) {
+    if (
+      toolCall.arguments &&
+      typeof toolCall.arguments.old_str === 'string' &&
+      typeof toolCall.arguments.new_str === 'string'
+    ) {
+      return {
+        oldStr: toolCall.arguments.old_str,
+        newStr: toolCall.arguments.new_str,
+      };
+    }
+  }
 
   const oldMatch = content.match(/<old_str>([\s\S]*?)<\/old_str>/);
   const newMatch = content.match(/<new_str>([\s\S]*?)<\/new_str>/);
@@ -281,6 +300,12 @@ export function getFileType(filePath: string): string {
 // Helper to extract URL from browser navigate operations
 export function extractBrowserUrl(content: string | undefined): string | null {
   if (!content) return null;
+  const toolCall = extractToolCall(content);
+  if (toolCall) {
+    if (toolCall.arguments && typeof toolCall.arguments.url === 'string') {
+      return toolCall.arguments.url;
+    }
+  }
   const urlMatch = content.match(/url=["'](https?:\/\/[^"']+)["']/);
   return urlMatch ? urlMatch[1] : null;
 }
