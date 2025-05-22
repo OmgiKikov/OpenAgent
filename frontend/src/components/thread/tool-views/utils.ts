@@ -253,6 +253,18 @@ export function extractFileContent(
     return processFileContent(contentMatch[1]);
   }
 
+  try {
+    const parsedContent = JSON.parse(content);
+    const toolCall = extractToolCall(parsedContent);
+    if (toolCall) {
+      if (toolCall.arguments && typeof toolCall.arguments.file_contents === 'string') {
+        return processFileContent(toolCall.arguments.file_contents);
+      }
+    }
+  } catch (e) {
+    // If JSON parsing fails, continue with the original content string
+  }
+
   return null;
 }
 
