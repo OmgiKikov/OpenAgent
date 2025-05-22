@@ -10,6 +10,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { Project } from '@/lib/api';
 import {
   extractPrimaryParam,
+  extractPrimaryParamFromJson,
   getToolIcon,
   safeJsonParse,
 } from '@/components/thread/utils';
@@ -198,11 +199,10 @@ export function renderMarkdownTools(
 
     toolCalls.forEach((toolCall, index) => {
         const toolName = toolCall.function.name;
-        // TODO: Consider how to display arguments. For now, we'll just show the tool name.
-        // const toolArgs = toolCall.function.arguments;
+        const toolArgs = toolCall.function.arguments;
         const toolCallKey = `tool-call-${index}`;
         const IconComponent = getToolIcon(toolName);
-        // const paramDisplay = extractPrimaryParam(toolName, JSON.stringify(toolArgs)); //This might not work directly if extractPrimaryParam expects XML
+        const paramDisplay = extractPrimaryParamFromJson(toolName, toolArgs);
 
         toolCallParts.push(
             <button
@@ -212,7 +212,7 @@ export function renderMarkdownTools(
             >
                 <IconComponent className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                 <span className="font-mono text-xs text-foreground">{toolName}</span>
-                {/* {paramDisplay && <span className="ml-1 text-muted-foreground truncate max-w-[200px]" title={paramDisplay}>{paramDisplay}</span>} */}
+                {paramDisplay && <span className="ml-1 text-muted-foreground truncate max-w-[200px]" title={paramDisplay}>{paramDisplay}</span>}
             </button>
         );
     });

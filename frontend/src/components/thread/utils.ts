@@ -209,3 +209,111 @@ export const extractPrimaryParam = (
     return null;
   }
 };
+
+// Helper function to extract a primary parameter from a JSON arguments object
+export const extractPrimaryParamFromJson = (
+  toolName: string,
+  toolArgs: any, // This is the parsed JSON object from toolCall.function.arguments
+): string | null => {
+  if (!toolArgs || typeof toolArgs !== 'object') return null;
+
+  try {
+    const lowerToolName = toolName?.toLowerCase();
+
+    // Handle browser tools
+    if (lowerToolName?.startsWith('browser-')) {
+      if (toolArgs.url && typeof toolArgs.url === 'string') {
+        return toolArgs.url;
+      }
+      if (toolArgs.goal && typeof toolArgs.goal === 'string') {
+        const goal = toolArgs.goal;
+        return goal.length > 30 ? goal.substring(0, 27) + '...' : goal;
+      }
+      return null;
+    }
+
+    switch (lowerToolName) {
+      // File operations
+      case 'create-file':
+      case 'full-file-rewrite':
+      case 'read-file':
+      case 'delete-file':
+      case 'str-replace':
+        if (toolArgs.file_path && typeof toolArgs.file_path === 'string') {
+          return toolArgs.file_path.split('/').pop() || toolArgs.file_path;
+        }
+        if (toolArgs.target_file && typeof toolArgs.target_file === 'string') {
+          return toolArgs.target_file.split('/').pop() || toolArgs.target_file;
+        }
+        return null;
+
+      // Shell commands
+      case 'execute-command':
+        if (toolArgs.command && typeof toolArgs.command === 'string') {
+          const cmd = toolArgs.command;
+          return cmd.length > 30 ? cmd.substring(0, 27) + '...' : cmd;
+        }
+        if (toolArgs.cmd && typeof toolArgs.cmd === 'string') {
+          const cmd = toolArgs.cmd;
+          return cmd.length > 30 ? cmd.substring(0, 27) + '...' : cmd;
+        }
+        return null;
+
+      // Web search
+      case 'web-search':
+        if (toolArgs.query && typeof toolArgs.query === 'string') {
+          const query = toolArgs.query;
+          return query.length > 30 ? query.substring(0, 27) + '...' : query;
+        }
+        return null;
+
+      // Data provider operations
+      case 'call-data-provider':
+        if (toolArgs.service_name && typeof toolArgs.service_name === 'string' && toolArgs.route && typeof toolArgs.route === 'string') {
+          return `${toolArgs.service_name}/${toolArgs.route}`;
+        }
+        if (toolArgs.service_name && typeof toolArgs.service_name === 'string') {
+          return toolArgs.service_name;
+        }
+        return null;
+
+      case 'execute-data-provider-call':
+        if (toolArgs.service_name && typeof toolArgs.service_name === 'string' && toolArgs.route && typeof toolArgs.route === 'string') {
+          return `${toolArgs.service_name}/${toolArgs.route}`;
+        }
+         if (toolArgs.service && typeof toolArgs.service === 'string' && toolArgs.route && typeof toolArgs.route === 'string') {
+          return `${toolArgs.service}/${toolArgs.route}`;
+        }
+        if (toolArgs.service_name && typeof toolArgs.service_name === 'string') {
+          return toolArgs.service_name;
+        }
+        if (toolArgs.service && typeof toolArgs.service === 'string') {
+          return toolArgs.service;
+        }
+        return null;
+
+      // Deployment
+      case 'deploy-site':
+        if (toolArgs.site_name && typeof toolArgs.site_name === 'string') {
+          return toolArgs.site_name;
+        }
+        return null;
+
+      default:
+        // Fallback: try to get common parameter names
+        if (toolArgs.path && typeof toolArgs.path === 'string') {
+          return toolArgs.path.split('/').pop() || toolArgs.path;
+        }
+        if (toolArgs.name && typeof toolArgs.name === 'string') {
+          return toolArgs.name;
+        }
+        if (toolArgs.id && typeof toolArgs.id === 'string') {
+          return toolArgs.id;
+        }
+        return null;
+    }
+  } catch (e) {
+    console.warn('Error extracting primary parameter from JSON:', e);
+    return null;
+  }
+};
