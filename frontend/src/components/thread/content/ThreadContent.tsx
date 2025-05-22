@@ -91,7 +91,8 @@ export function renderMarkdown(
     debugMode?: boolean
 ) {
     const contentParts = renderMarkdownContent(content.content, handleToolClick, messageId, fileViewerHandler, sandboxId, project, debugMode);
-    return contentParts;
+    const toolCallParts = renderMarkdownTools(content.tool_calls, handleToolClick, messageId);
+    return [...contentParts, ...toolCallParts];
 }
 
 // Render Markdown content while preserving XML tags that should be displayed as tool calls
@@ -106,11 +107,11 @@ export function renderMarkdownContent(
 ) {
     // If in debug mode, just display raw content in a pre tag
     if (debugMode) {
-        return (
-            <pre className="text-xs font-mono whitespace-pre-wrap overflow-x-auto p-2 border border-border rounded-md bg-muted/30 text-foreground">
+        return [
+            <pre key="debug-pre" className="text-xs font-mono whitespace-pre-wrap overflow-x-auto p-2 border border-border rounded-md bg-muted/30 text-foreground">
                 {content}
             </pre>
-        );
+        ];
     }
 
     const xmlRegex = /<(?!inform\b)([a-zA-Z\-_]+)(?:\s+[^>]*)?>(?:[\s\S]*?)<\/\1>|<(?!inform\b)([a-zA-Z\-_]+)(?:\s+[^>]*)?\/>/g;
@@ -120,7 +121,7 @@ export function renderMarkdownContent(
 
     // If no XML tags found, just return the full content as markdown
     if (!content.match(xmlRegex)) {
-        return <Markdown className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words">{content}</Markdown>;
+        return [<Markdown key="md-full" className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words">{content}</Markdown>];
     }
 
     while ((match = xmlRegex.exec(content)) !== null) {
@@ -182,6 +183,41 @@ export function renderMarkdownContent(
     }
 
     return contentParts;
+}
+
+export function renderMarkdownTools(
+    toolCalls: Array<{ function: { name: string; arguments: any } }> | undefined,
+    handleToolClick: (assistantMessageId: string | null, toolName: string) => void,
+    messageId: string | null
+) {
+    if (!toolCalls || toolCalls.length === 0) {
+        return [];
+    }
+
+    const toolCallParts: React.ReactNode[] = [];
+
+    toolCalls.forEach((toolCall, index) => {
+        const toolName = toolCall.function.name;
+        // TODO: Consider how to display arguments. For now, we'll just show the tool name.
+        // const toolArgs = toolCall.function.arguments;
+        const toolCallKey = `tool-call-${index}`;
+        const IconComponent = getToolIcon(toolName);
+        // const paramDisplay = extractPrimaryParam(toolName, JSON.stringify(toolArgs)); //This might not work directly if extractPrimaryParam expects XML
+
+        toolCallParts.push(
+            <button
+                key={toolCallKey}
+                onClick={() => handleToolClick(messageId, toolName)}
+                className="inline-flex items-center gap-1.5 py-1 px-2.5 my-1 text-xs text-muted-foreground bg-muted hover:bg-muted/80 rounded-md transition-colors cursor-pointer border border-border"
+            >
+                <IconComponent className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                <span className="font-mono text-xs text-foreground">{toolName}</span>
+                {/* {paramDisplay && <span className="ml-1 text-muted-foreground truncate max-w-[200px]" title={paramDisplay}>{paramDisplay}</span>} */}
+            </button>
+        );
+    });
+
+    return toolCallParts;
 }
 
 export interface ThreadContentProps {
