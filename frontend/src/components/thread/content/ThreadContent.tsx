@@ -81,6 +81,19 @@ export function renderAttachments(attachments: string[], fileViewerHandler?: (fi
     />;
 }
 
+export function renderMarkdown(
+    content: any,
+    handleToolClick: (assistantMessageId: string | null, toolName: string) => void,
+    messageId: string | null,
+    fileViewerHandler?: (filePath?: string) => void,
+    sandboxId?: string,
+    project?: Project,
+    debugMode?: boolean
+) {
+    const contentParts = renderMarkdownContent(content.content, handleToolClick, messageId, fileViewerHandler, sandboxId, project, debugMode);
+    return contentParts;
+}
+
 // Render Markdown content while preserving XML tags that should be displayed as tool calls
 export function renderMarkdownContent(
     content: string,
@@ -430,8 +443,8 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
 
                                                                             if (!parsedContent.content) return;
 
-                                                                            const renderedContent = renderMarkdownContent(
-                                                                                parsedContent.content,
+                                                                            const renderedContent = renderMarkdown(
+                                                                                parsedContent,
                                                                                 handleToolClick,
                                                                                 message.message_id,
                                                                                 handleOpenFileViewer,
@@ -672,4 +685,4 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
     );
 };
 
-export default ThreadContent; 
+export default ThreadContent;
