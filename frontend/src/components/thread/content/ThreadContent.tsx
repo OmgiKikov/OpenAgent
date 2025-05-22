@@ -92,7 +92,7 @@ export function renderMarkdown(
     debugMode?: boolean
 ) {
     const contentParts = renderMarkdownContent(content.content, handleToolClick, messageId, fileViewerHandler, sandboxId, project, debugMode);
-    const toolCallParts = renderMarkdownTools(content.tool_calls, handleToolClick, messageId);
+    const toolCallParts = renderMarkdownTools(content.tool_calls, handleToolClick, messageId, fileViewerHandler, sandboxId, project);
     return [...contentParts, ...toolCallParts];
 }
 
@@ -189,7 +189,10 @@ export function renderMarkdownContent(
 export function renderMarkdownTools(
     toolCalls: Array<{ function: { name: string; arguments: any } }> | undefined,
     handleToolClick: (assistantMessageId: string | null, toolName: string) => void,
-    messageId: string | null
+    messageId: string | null,
+    fileViewerHandler?: (filePath?: string) => void,
+    sandboxId?: string,
+    project?: Project
 ) {
     if (!toolCalls || toolCalls.length === 0) {
         return [];
@@ -201,20 +204,42 @@ export function renderMarkdownTools(
         const toolName = toolCall.function.name;
         const toolArgs = toolCall.function.arguments;
         const toolCallKey = `tool-call-${index}`;
-        const IconComponent = getToolIcon(toolName);
-        const paramDisplay = extractPrimaryParamFromJson(toolName, toolArgs);
 
-        toolCallParts.push(
-            <button
-                key={toolCallKey}
-                onClick={() => handleToolClick(messageId, toolName)}
-                className="inline-flex items-center gap-1.5 py-1 px-2.5 my-1 text-xs text-muted-foreground bg-muted hover:bg-muted/80 rounded-md transition-colors cursor-pointer border border-border"
-            >
-                <IconComponent className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                <span className="font-mono text-xs text-foreground">{toolName}</span>
-                {paramDisplay && <span className="ml-1 text-muted-foreground truncate max-w-[200px]" title={paramDisplay}>{paramDisplay}</span>}
-            </button>
-        );
+        if (toolName === 'ask') {
+            // Extract attachments from the arguments
+            const attachments = toolArgs.attachments
+                ? (Array.isArray(toolArgs.attachments) ? toolArgs.attachments : toolArgs.attachments.split(',').map((a: string) => a.trim()))
+                : [];
+
+            // Extract content from the arguments
+            const askContent = toolArgs.text
+
+            // Render <ask> tool content with attachment UI
+            toolCallParts.push(
+                <div key={`ask-call-${index}`} className="space-y-3">
+                    {askContent && (
+                        <Markdown className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words [&>:first-child]:mt-0 prose-headings:mt-3">{askContent}</Markdown>
+                    )}
+                    {renderAttachments(attachments, fileViewerHandler, sandboxId, project)}
+                </div>
+            );
+        } else {
+            const IconComponent = getToolIcon(toolName);
+            const paramDisplay = extractPrimaryParamFromJson(toolName, toolArgs);
+
+            // Render tool button as a clickable element
+            toolCallParts.push(
+                <button
+                    key={toolCallKey}
+                    onClick={() => handleToolClick(messageId, toolName)}
+                    className="inline-flex items-center gap-1.5 py-1 px-2.5 my-1 text-xs text-muted-foreground bg-muted hover:bg-muted/80 rounded-md transition-colors cursor-pointer border border-border"
+                >
+                    <IconComponent className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                    <span className="font-mono text-xs text-foreground">{toolName}</span>
+                    {paramDisplay && <span className="ml-1 text-muted-foreground truncate max-w-[200px]" title={paramDisplay}>{paramDisplay}</span>}
+                </button>
+            );
+        }
     });
 
     return toolCallParts;
