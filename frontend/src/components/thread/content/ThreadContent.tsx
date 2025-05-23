@@ -582,7 +582,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                                                             {(() => {
                                                                                                 const toolName = streamingToolCall.name || streamingToolCall.xml_tag_name || 'Tool';
                                                                                                 const IconComponent = getToolIcon(toolName);
-                                                                                                const paramDisplay = extractPrimaryParam(toolName, streamingToolCall.arguments || '');
+                                                                                                const paramDisplay = extractPrimaryParamFromJson(toolName, streamingToolCall.arguments);
                                                                                                 return (
                                                                                                     <button
                                                                                                         className="inline-flex items-center gap-1.5 py-1 px-2.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-md transition-colors cursor-pointer border border-primary/20"

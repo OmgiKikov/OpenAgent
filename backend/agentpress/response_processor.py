@@ -35,6 +35,7 @@ class ToolExecutionContext:
     tool_index: int
     result: Optional[ToolResult] = None
     function_name: Optional[str] = None
+    arguments: Optional[Dict[str, Any]] = None
     xml_tag_name: Optional[str] = None
     error: Optional[Exception] = None
     assistant_message_id: Optional[str] = None
@@ -1542,6 +1543,8 @@ class ResponseProcessor:
             parsing_details=parsing_details,
         )
 
+        context.arguments = tool_call.get("arguments")
+
         # Set function_name and xml_tag_name fields
         if "xml_tag_name" in tool_call:
             context.xml_tag_name = tool_call["xml_tag_name"]
@@ -1574,6 +1577,7 @@ class ResponseProcessor:
                 "role": "assistant",
                 "status_type": "tool_started",
                 "function_name": context.function_name,
+                "arguments": context.arguments,
                 "xml_tag_name": context.xml_tag_name,
                 "message": f"Starting execution of {context.xml_tag_name or context.function_name}",
                 "tool_index": context.tool_index,
