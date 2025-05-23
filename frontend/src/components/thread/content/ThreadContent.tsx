@@ -555,7 +555,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
 
                                                                             const textToRender = streamingTextContent || '';
                                                                             const textBeforeTag = detectedTag ? textToRender.substring(0, tagStartIndex) : textToRender;
-                                                                            const showCursor = (streamHookStatus === 'streaming' || streamHookStatus === 'connecting') && !detectedTag;
+                                                                            const showCursor = (streamHookStatus === 'streaming' || streamHookStatus === 'connecting') && !detectedTag && !streamingToolCall;
 
                                                                             return (
                                                                                 <>
@@ -577,7 +577,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                                                         </div>
                                                                                     )}
 
-                                                                                    {streamingToolCall && !detectedTag && (
+                                                                                    {streamingToolCall && (
                                                                                         <div className="mt-2 mb-1">
                                                                                             {(() => {
                                                                                                 const toolName = streamingToolCall.name || streamingToolCall.xml_tag_name || 'Tool';
