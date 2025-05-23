@@ -213,18 +213,19 @@ export function extractStrReplaceContent(content: string | undefined): {
   newStr: string | null;
 } {
   if (!content) return { oldStr: null, newStr: null };
-  const toolCall = extractToolCall(content);
-  if (toolCall) {
-    if (
-      toolCall.arguments &&
-      typeof toolCall.arguments.old_str === 'string' &&
-      typeof toolCall.arguments.new_str === 'string'
-    ) {
-      return {
-        oldStr: toolCall.arguments.old_str,
-        newStr: toolCall.arguments.new_str,
-      };
+  try {
+    const parsedContent = JSON.parse(content);
+    const toolCall = extractToolCall(parsedContent);
+    if (toolCall) {
+      if (toolCall.arguments && typeof toolCall.arguments.old_str === 'string' && typeof toolCall.arguments.new_str === 'string') {
+        return {
+          oldStr: toolCall.arguments.old_str,
+          newStr: toolCall.arguments.new_str,
+        };
+      }
     }
+  } catch (e) {
+    // If JSON parsing fails, continue with the original content string
   }
 
   const oldMatch = content.match(/<old_str>([\s\S]*?)<\/old_str>/);
