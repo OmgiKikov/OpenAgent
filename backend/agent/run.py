@@ -1,6 +1,5 @@
 import json
 from typing import Dict, Optional, List, Any, AsyncGenerator
-from mcp import ClientSession
 from supabase import AsyncClient
 
 from agent.tools.message_tool import MessageTool
@@ -21,15 +20,14 @@ from utils.logger import logger
 from utils.auth_utils import get_account_id_from_thread
 from services.billing import check_billing_status
 from agent.tools.sb_vision_tool import SandboxVisionTool
+from agent.tools.mcp_manager.mcp_manager import McpManager
 
 
 async def get_database_client(thread_manager: ThreadManager):
     return await thread_manager.db.client
 
 
-async def initialize_tools(
-    thread_manager: ThreadManager, project_id: str, thread_id: str, mcp_session: Optional[ClientSession] = None
-):
+async def initialize_tools(thread_manager: ThreadManager, project_id: str, thread_id: str):
     """Initialize all tools required for agent operation."""
     await thread_manager.add_tool(SandboxShellTool, project_id=project_id, thread_manager=thread_manager)
     await thread_manager.add_tool(SandboxFilesTool, project_id=project_id, thread_manager=thread_manager)
@@ -49,9 +47,7 @@ async def initialize_tools(
         thread_id=thread_id,
         thread_manager=thread_manager,
     )
-
-    if mcp_session is not None:
-        await thread_manager.add_tool(MCPTools, session=mcp_session)
+    await thread_manager.add_tool(MCPTools, mcp_manager=McpManager())
 
     if config.RAPID_API_KEY:
         await thread_manager.add_tool(DataProvidersTool)
@@ -248,16 +244,10 @@ async def check_billing_status_for_account(client: AsyncClient, account_id: str)
     return None
 
 
-async def configure_thread_manager(
-    thread_id: str, project_id: str, mcp_session: Optional[ClientSession] = None
-) -> ThreadManager:
+async def configure_thread_manager(thread_id: str, project_id: str) -> ThreadManager:
     """Configure and prepare the thread manager with all required tools."""
     thread_manager = ThreadManager()
-
-    await initialize_tools(
-        thread_manager=thread_manager, project_id=project_id, thread_id=thread_id, mcp_session=mcp_session
-    )
-
+    await initialize_tools(thread_manager=thread_manager, project_id=project_id, thread_id=thread_id)
     return thread_manager
 
 
@@ -436,13 +426,12 @@ async def run_agent(
     enable_thinking: Optional[bool] = False,
     reasoning_effort: Optional[str] = "low",
     enable_context_manager: bool = True,
-    mcp_session: Optional[ClientSession] = None,
 ) -> AsyncGenerator[Dict[str, Any], None]:
     """Run the development agent with specified configuration."""
     logger.info(f"🚀 Starting agent with model: {model_name}")
 
     # Initialize thread manager and configuration
-    thread_manager = await configure_thread_manager(thread_id=thread_id, project_id=project_id, mcp_session=mcp_session)
+    thread_manager = await configure_thread_manager(thread_id=thread_id, project_id=project_id)
     client = await get_database_client(thread_manager=thread_manager)
     account_id = await get_account_id_for_thread(client=client, thread_id=thread_id)
 

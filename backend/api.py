@@ -13,6 +13,7 @@ from utils.logger import logger
 import uuid
 import time
 from collections import OrderedDict
+from agent.tools.mcp_manager.mcp_manager import McpManager
 
 # Import the agent API module
 from agent import api as agent_api
@@ -46,6 +47,15 @@ async def lifespan(app: FastAPI):
         # Initialize database
         await db.initialize()
         thread_manager = ThreadManager()
+
+        # Initialize MCP manager
+        mcp_manager = McpManager()
+        await mcp_manager.register_server(
+            name="google-calendar-mcp",
+            command="node",
+            args=["/Users/v.makarenko/work/sber/google-calendar-mcp/build/index.js"],
+            env=None,
+        )
 
         # Initialize the agent API with shared resources
         agent_api.initialize(thread_manager, db, instance_id)
