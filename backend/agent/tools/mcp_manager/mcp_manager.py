@@ -116,7 +116,8 @@ class McpManager:
 
     @staticmethod
     def _get_full_tool_name(server_name: str, tool_name: str) -> str:
-        return f"{server_name}-{tool_name}"
+        full_name = f"{server_name}-{tool_name}"
+        return full_name.replace("_", "-")
 
     @classmethod
     def _register_tools(cls, server: McpServer) -> None:
