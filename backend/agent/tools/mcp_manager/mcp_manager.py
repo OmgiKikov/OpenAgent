@@ -34,6 +34,7 @@ class McpServer:
                     server_parameters=self.parameters,
                 )
             )
+        logger.info(f"Successfully reloaded tools for MCP server {self.name}: {[tool.name for tool in self.tools]}")
 
 
 class McpManager:
