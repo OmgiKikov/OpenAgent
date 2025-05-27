@@ -56,6 +56,12 @@ async def lifespan(app: FastAPI):
             args=["/Users/v.makarenko/work/sber/google-calendar-mcp/build/index.js"],
             env=None,
         )
+        await mcp_manager.register_server(
+            name="gmail-mcp",
+            command="npx",
+            args=["@gongrzhe/server-gmail-autoauth-mcp"],
+            env=None,
+        )
 
         # Initialize the agent API with shared resources
         agent_api.initialize(thread_manager, db, instance_id)
