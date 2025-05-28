@@ -58,8 +58,8 @@ async def lifespan(app: FastAPI):
         )
         await mcp_manager.register_server(
             name="gmail-mcp",
-            command="npx",
-            args=["@gongrzhe/server-gmail-autoauth-mcp"],
+            command="npm",
+            args=["start", "--prefix", "/Users/v.makarenko/work/sber/Gmail-MCP-Server/"],
             env=None,
         )
 
