@@ -204,6 +204,7 @@ export function renderMarkdownTools(
         const toolName = toolCall.function.name;
         const toolArgs = toolCall.function.arguments;
         const toolCallKey = `tool-call-${index}`;
+        const IconComponent = getToolIcon(toolName);
 
         if (toolName === 'ask') {
             // Extract attachments from the arguments
@@ -212,19 +213,27 @@ export function renderMarkdownTools(
                 : [];
 
             // Extract content from the arguments
-            const askContent = toolArgs.text
+            const askContent = toolArgs.text;
 
-            // Render <ask> tool content with attachment UI
+            // Render ask tool as a button with content in a separate block
             toolCallParts.push(
                 <div key={`ask-call-${index}`} className="space-y-3">
+                    <button
+                        onClick={() => handleToolClick(messageId, toolName)}
+                        className="inline-flex items-center gap-1.5 py-1 px-2.5 my-1 text-xs text-muted-foreground bg-muted hover:bg-muted/80 rounded-md transition-colors cursor-pointer border border-border"
+                    >
+                        <IconComponent className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                        <span className="font-mono text-xs text-foreground">{toolName}</span>
+                    </button>
                     {askContent && (
-                        <Markdown className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words [&>:first-child]:mt-0 prose-headings:mt-3">{askContent}</Markdown>
+                        <div className="px-2.5 py-1.5 text-xs text-muted-foreground bg-muted rounded-md border border-border">
+                            <Markdown className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words [&>:first-child]:mt-0 prose-headings:mt-3">{askContent}</Markdown>
+                        </div>
                     )}
                     {renderAttachments(attachments, fileViewerHandler, sandboxId, project)}
                 </div>
             );
         } else {
-            const IconComponent = getToolIcon(toolName);
             const paramDisplay = extractPrimaryParamFromJson(toolName, toolArgs);
 
             // Render tool button as a clickable element
